@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -36,11 +36,13 @@ require_once('include/play.inc.php');
 
 $action		= get('action');
 $album_id	= get('album_id');
+$track_id	= get('track_id');
 
 if		($action == 'playlist')		playlist();
 //elseif	($action == 'playTo')		playTo();
 elseif	($action == 'stream')		stream();
 elseif	($action == 'streamTo')		streamTo();
+elseif	($action == 'streamTidal')		streamTidal($track_id);
 elseif	($action == 'shareAlbum')	shareAlbum($album_id);
 else	message(__FILE__, __LINE__, 'error', '[b]Unsupported input value for[/b][br]action');
 exit();
@@ -510,6 +512,42 @@ function streamTo() {
 			header('HTTP/1.1 500 Internal Server Error');
 			exit();
 		}
+	}
+}
+
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Stream Tidal track                                                     |
+//  +------------------------------------------------------------------------+
+function streamTidal($id) {
+	global $cfg, $db;
+
+	$t = new TidalAPI;
+	$t->username = $cfg["tidal_username"];
+	$t->password = $cfg["tidal_password"];
+	$t->token = $cfg["tidal_token"];
+	$t->audioQuality = $cfg["tidal_audio_quality"];
+	$t->fixSSLcertificate();
+	$conn = $t->connect();
+	if ($conn === true){
+		$trackURL = $t->getStreamURL($id);
+		for ($i=0;$i<4;$i++) {
+			//get 8 bytes of stream to make sure that stream is ready
+			$stream = file_get_contents($trackURL["url"], NULL, NULL, 0, 8);
+			if (strlen($stream) > 0) {
+				cliLog('stream: ' . $stream . ' iteration: ' . $i);
+				break;
+			}
+		}
+		
+		cliLog('Tidal track URL for ' . $id . ': ' . 	$trackURL["url"]);
+		header("Location: " . $trackURL["url"]);
+	}
+	else {
+		echo 'TIDAL_CONNECT_ERROR';
+		var_dump($conn);
 	}
 }
 

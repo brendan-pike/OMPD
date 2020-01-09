@@ -1,7 +1,7 @@
 <?php
 
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -38,6 +38,9 @@ function parseTrackArtist($data) {
 function parseAlbumTitle($data) {
     if(isset($data['comments']['album'][0])) {
         return $data['comments']['album'][0];
+    } 
+    if(isset($data['cue']['title'])) {
+        return $data['cue']['title'];
     }
     return 'Unknown Album Title';
 }
@@ -211,7 +214,35 @@ function postProcessDiscNumber($numberString) {
 }
 
 function parseYear($data) {
-    if (isset($data['comments']['year'][0])) {
+	//for FLAC:
+    if (isset($data['comments']['originalyear'][0])) {
+        return postProcessYear($data['comments']['originalyear'][0]);
+    }
+	if (isset($data['comments']['originaldate'][0])) {
+        return postProcessYear($data['comments']['originaldate'][0]);
+    }
+	if (isset($data['comments']['origyear'][0])) {
+        return postProcessYear($data['comments']['origyear'][0]);
+    }
+	//for mp3:
+	if(isset($data['tags']['id3v2']['text']['originalyear'])) {
+        return intval($data['tags']['id3v2']['text']['originalyear']);
+    }
+	if(isset($data['tags']['id3v2']['text']['ORIGINALYEAR'])) {
+        return intval($data['tags']['id3v2']['text']['ORIGINALYEAR']);
+    }
+	if (isset($data['comments']['original_year'][0])) {
+        return postProcessYear($data['comments']['original_year'][0]);
+    }
+	if (isset($data['comments']['original_release_time'][0])) {
+        return postProcessYear($data['comments']['original_release_time'][0]);
+    }
+	//for cue:
+	if (isset($data['cue']['comments'][0]['date'])) {
+        return postProcessYear($data['cue']['comments'][0]['date']);
+    }
+	//common:
+	if (isset($data['comments']['year'][0])) {
         return postProcessYear($data['comments']['year'][0]);
     }
     if (isset($data['comments']['date'][0])) {
@@ -246,6 +277,14 @@ function parseComment($data) {
     return '';
 }
 
+function parseComposer($data) {
+    if (isset($data['comments']['composer'][0])) {
+        return $data['comments']['composer'][0];
+    }
+    return '';
+}
+
+
 // TODO: this function is currently not used but removed from old fileInfo() code-mess
 // consider to make use of it within fileStructure() or whereelse needed
 function parseAlbumArtist($data) {
@@ -254,6 +293,9 @@ function parseAlbumArtist($data) {
     }
     if (isset($data['comments']['band'][0])) {
         return $data['comments']['band'][0];
+    }
+		if (isset($data['cue']['performer'])) {
+        return $data['cue']['performer'];
     }
     return 'Unknown AlbumArtist';
 }
@@ -269,8 +311,9 @@ function parseMimeType($data) {
 }
 
 function parseError($data) {
+    //if (!empty($data['error'])) {
     if (isset($data['error'])) {
-        return implode('<br>', $data['error']);
+				return implode('<br>', $data['error']);
     }
     return '';
 }
@@ -342,7 +385,10 @@ function parseAudioDataformat($data) {
 }
 
 function parseAudioEncoder($data) {
-    if(isset($data['audio']['encoder'])) {
+    if(isset($data['mpeg']['audio']['LAME']['short_version'])) {
+        return $data['mpeg']['audio']['LAME']['short_version'];
+    }
+		if(isset($data['audio']['encoder'])) {
         return $data['audio']['encoder'];
     }
     return 'Unknown encoder';

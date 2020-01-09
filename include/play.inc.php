@@ -1,5 +1,9 @@
 <?php
 //  +------------------------------------------------------------------------+
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
+//  | http://www.ompd.pl                                                     |
+//  |                                                                        |
+//  |                                                                        |
 //  | netjukebox, Copyright © 2001-2012 Willem Bartels                       |
 //  |                                                                        |
 //  | http://www.netjukebox.nl                                               |
@@ -28,6 +32,13 @@
 if (PHP_SAPI == 'cli' && isset($cfg['player_id']) == false)
 	$cfg['player_id'] = 0;
 
+/* $query=mysqli_query($db,'SELECT player_id FROM player, session WHERE (sid = BINARY "' . cookie('netjukebox_sid') . '") and player.player_id=session.player_id');
+$player = mysqli_fetch_assoc($query);
+
+if ($player['player_id'] != $cfg['player_id'] && mysqli_num_rows($query) > 0) {
+	$cfg['player_id'] = $cfg['player_id'];
+}
+ */
 $query = mysqli_query($db,'SELECT player_name, player_type, player_host, player_port, player_pass, media_share, player_id
 	FROM player
 	WHERE player_id = ' . mysqli_real_escape_string($db,$cfg['player_id']));
@@ -120,13 +131,12 @@ function vlc($command) {
 //  +------------------------------------------------------------------------+
 function mpd($command,$player_host="",$player_port="") {
 	global $cfg;
-	
 	if ($player_host=="" && $player_port==""){
 		$player_host = $cfg['player_host'];
 		$player_port = $cfg['player_port'];
 	}
 	
-	$soket = @fsockopen($player_host, $player_port, $error_no, $error_string, 3) or message(__FILE__, __LINE__, 'error', '[b]Music Player Daemon error[/b][br]Failed to connect to: ' . $cfg['player_host'] . ':' . $cfg['player_port'] . '[br]' . $error_string);
+	$soket = @fsockopen($player_host, $player_port, $error_no, $error_string, 3) or message(__FILE__, __LINE__, 'error', '[b]Music Player Daemon error[/b][br]Failed to connect to: ' . $cfg['player_host'] . ':' . $cfg['player_port'] . '[br]' . $error_string . '[br]Check player settings:[br] [url=config.php?action=playerProfile]config.php?action=playerProfile[/url]');
 	if ($cfg['mpd_password'] != '') {
 		@fwrite($soket, "password " . $cfg['mpd_password'] . "\n") or message(__FILE__, __LINE__, 'error', '[b]Music Player Daemon error[/b][br]Failed to write to: ' . $cfg['player_host'] . ':' . $cfg['player_port']);
 	}
@@ -150,12 +160,16 @@ function mpd($command,$player_host="",$player_port="") {
 		}
 	};
 	while (!feof($soket)) {
-		$line = trim(@fgets($soket, 1024));
+		$line = trim(@fgets($soket, 2048));
 		if (substr($line, 0, 3) == 'ACK') {
-			//file doesn't exists or no access to file
+			//file doesn't exist or no access to file
 			if (substr($line, 0, 8) == 'ACK [50@' || substr($line, 0, 7) == 'ACK [4@') {
 				fclose($soket);
 				return 'ACK_ERROR_NO_EXIST';
+			}
+			elseif (substr($line, 0, 8) == 'ACK [5@0') {
+				fclose($soket);
+				return 'ACK_ERROR_UNKNOWN';
 			}
 			else {
 				fclose($soket); 
@@ -167,6 +181,9 @@ function mpd($command,$player_host="",$player_port="") {
 			if ($command == 'status' && isset($array['time']) && version_compare($cfg['mpd_version'], '0.16.0', '<')) {
 				list($seconds, $dummy) = explode(':', $array['time'], 2);
 				$array['elapsed'] = $seconds;
+			}
+			elseif (strpos($command,'load') !== false) {
+				$array[] = 'add_OK';
 			}
 			return $array;
 		}
@@ -185,11 +202,40 @@ function mpd($command,$player_host="",$player_port="") {
 			list($key, $value) = explode(': ', $line ,2);
 			$array[$key][] = iconv('UTF-8', NJB_DEFAULT_CHARSET, $value);
 		}
+		elseif (strpos($command,'listplaylistinfo') !== false) {
+			/* 
+			file: nas/Duran Duran/Notorious/01. Duran Duran - Notorious.flac
+			Last-Modified: 2016-03-10T21:34:59Z
+			Title: Notorious
+			Album: Notorious
+			Artist: Duran Duran
+			Genre: New Romantic
+			AlbumArtist: Duran Duran
+			Disc: 1/1
+			Date: 1986
+			Track: 01
+			Time: 258 
+			*/
+			list($key, $value) = explode(': ', $line);
+			$array[$key][] = iconv('UTF-8', NJB_DEFAULT_CHARSET, $value);
+		}
+		elseif ($command == 'listplaylists') {
+			/*
+			playlist: pl_1 
+			Last-Modified: 2018-06-08T08:20:07Z
+			*/
+			if (strpos($line,'playlist:') !== false) {
+				list($key, $value) = explode(': ', $line);
+				$array[] = iconv('UTF-8', NJB_DEFAULT_CHARSET, $value);
+			}
+		}
+		
 		else {
 			// name: value
 			list($key, $value) = explode(': ', $line, 2);
 			//$array[$key] = $value;	
 			$array[$key] = iconv('UTF-8', NJB_DEFAULT_CHARSET, $value);	
+			
 		}
 	}    
 	fclose($soket);
@@ -282,6 +328,7 @@ function mpd_OK($command,$player_host="",$player_port="") {
 function mpdSilent($command,$player_host="",$player_port="") {
 	global $cfg;
 	
+	$time_start = microtime(true);
 	if ($player_host=="" && $player_port==""){
 		$player_host = $cfg['player_host'];
 		$player_port = $cfg['player_port'];
@@ -321,7 +368,7 @@ function mpdSilent($command,$player_host="",$player_port="") {
 	};
 	
 	while (!feof($soket)) {
-		$line = trim(@fgets($soket, 1024));
+		$line = trim(@fgets($soket, 2048));
 		if (substr($line, 0, 3) == 'ACK') {
 			//file doesn't exists or no access to file
 			if (substr($line, 0, 8) == 'ACK [50@' || substr($line, 0, 7) == 'ACK [4@') {
@@ -339,6 +386,8 @@ function mpdSilent($command,$player_host="",$player_port="") {
 				list($seconds, $dummy) = explode(':', $array['time'], 2);
 				$array['elapsed'] = $seconds;
 			}
+			$time_end = microtime(true);
+			$cfg['delay'] = round(($time_end - $time_start) * 1000);
 			return $array;
 		}
 		if ($command == 'playlist' && version_compare($cfg['mpd_version'], '0.16.0', '<')) {
@@ -496,26 +545,6 @@ function playTo($insPos, $track_id = '', $filepath = '', $dirpath = '', $player_
 			AND favorite_id = "' . mysqli_real_escape_string($db,$favorite_id) . '"
 			ORDER BY position');
 	}
-	/* elseif ($random == 'database') {
-		$query = mysqli_query($db,'SELECT artist, title, relative_file, miliseconds, audio_bitrate, track.track_id
-			FROM track, random
-			WHERE random.sid	= "' . mysqli_real_escape_string($db,$cfg['sid']) . '" AND
-			random.track_id		= track.track_id
-			ORDER BY position');
-	}
-	elseif ($random == 'new') {
-		//$query = mysqli_query($db,'SELECT artist, title, relative_file, miliseconds, audio_bitrate, track_id FROM track WHERE track_id = "' . mysqli_real_escape_string($db,$track_id) . '"');
-		$blacklist = explode(',', $cfg['random_blacklist']);
-		$blacklist = '"' . implode('","', $blacklist) . '"';
-		$query = mysqli_query($db,'SELECT track.artist, title, relative_file, miliseconds, audio_bitrate, track_id
-			FROM track, album
-			WHERE (genre_id = "" OR genre_id NOT IN (' . $blacklist . ')) AND
-			audio_dataformat != "" AND
-			video_dataformat = "" AND
-			track.album_id = album.album_id
-			ORDER BY RAND()
-			LIMIT 1');
-	} */
 	
 	elseif ($filepath) {
 		$filepath = str_replace('ompd_ampersand_ompd','&',$filepath);
@@ -578,6 +607,27 @@ function playTo($insPos, $track_id = '', $filepath = '', $dirpath = '', $player_
 		//updateCounter($album_id, NJB_COUNTER_STREAM);
 	}
 	
+}
+
+
+
+//  +------------------------------------------------------------------------+
+//  | mpdAddTidalTrack                                                       |
+//  +------------------------------------------------------------------------+
+
+function mpdAddTidalTrack($id, $insPos = '') {
+	global $cfg, $db;
+	$mpdCommand = 'ACK_ERROR_UNKNOWN';
+	if ($cfg['tidal_direct']) {
+		$mpdCommand = mpd('addid "' . NJB_HOME_URL . 'stream.php?action=streamTidal&track_id=' . $id . '" ' . $insPos);
+	}
+	elseif ($cfg['upmpdcli_tidal']) {
+	$mpdCommand = mpd('addid "' . $cfg['upmpdcli_tidal'] . $id . '" ' . $insPos);
+	}
+	else {
+		$mpdCommand = mpd('addid ' . MPD_TIDAL_URL . $id . ' ' . $insPos);
+	}
+	return $mpdCommand;
 }
 
 ?>

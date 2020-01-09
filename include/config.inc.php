@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -54,33 +54,196 @@ $cfg['media_dir']                   = '/share/HDA_DATA/ompd/';
 
 
 
-//  +------------------- NEW IN O!MPD 1.04 ----------------------------------+
-
+//  +------------------- NEW IN O!MPD 1.06 ----------------------------------+
 
 //  +------------------------------------------------------------------------+
-//  | Play audio from Youtube                                                |
+//  | Tidal                                                                  |
 //  +------------------------------------------------------------------------+
-//  | You can listen to YT movie audio stream by inserting address of YT     |
-//  | movie into Now Playing -> Add -> File/stream                           |
+//  | Tidal account is required (username and password below).               |
+//  | Token is also required. You can find instruction how to get it here:   |
+//  | https://github.com/lucaslg26/TidalAPI                                  |
 //  |                                                                        |
-//  | It requires youtube-dl (https://github.com/rg3/youtube-dl)             |
+//  | You can play music from Tidal using mpd's Tidal plugin. This requires: |
+//  |  - mpd version >=0.21                                                  |
+//  |  - plugin 'tidal' in mpd.conf with valid username/password/token fields|
 //  |                                                                        |
-//  | In general it should work with:                                        |
-//  | $cfg['python_path'] = '' and  $cfg['youtube-dl_path'] = 'youtube-dl'   |
-//  | but in my case I have to define full path to python and youtube-dl     |
+//  | If your mpd doesn't support Tidal, you can set 'tidal_direct' to true. |
+//  | It will force O!MPD to get stream from Tidal and pass it to mpd.       |
+//  | In this case you can choose 'tidal_audio_quality', which can be one of:|
+//  | "LOW" - 96kbps, AAC                                                    |
+//  | "HIGH" - 320kbps, AAC                                                  |
+//  | "LOSSLESS" - lossless codec: FLAC or ALAC, depending on token          |
+//  |   - LOSSLESS requires right token: for some tokens audio stream is     |
+//  |   encrypted and will not play in mpd. Best are tokens from Android     |
+//  |   or iOS. They can be found in the Internet)                           |
+//  |                                                                        |
+//  | Third method is using upmpdcli-tidal - see section 'Tidal via upmpdcli'|
+//  | below.                                                                 |
 //  +------------------------------------------------------------------------+
 
-$cfg['python_path'] = '/share/HDA_DATA/.qpkg/Python3/src/bin/python3';
-$cfg['youtube-dl_path'] = '/share/HDA_DATA/Download/youtube-dl/__main__.py';
+$cfg['tidal_username'] = "";
+$cfg['tidal_password'] = "";
+$cfg['tidal_token'] = "";
+$cfg['tidal_audio_quality'] = "HIGH";
+$cfg['tidal_direct'] = false;
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Default login                                                          |
+//  +------------------------------------------------------------------------+
+//  | Default username/password that will be automatically entered           |
+//  | into login form. If empty, $cfg['anonymous_user'] will be used         |
+//  | as username                                                            |
+//  +------------------------------------------------------------------------+
+
+$cfg['default_username'] = '';
+$cfg['default_password'] = '';
+
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Internet stations image                                                |
+//  +------------------------------------------------------------------------+
+//  | Path to images for radio stations and other streams.                   |
+//  | jpg and png files are supported.                                       |
+//  | Use host name as name for image file, e.g. for stream:                 |
+//  | http://stream14.shoutcastsolutions.com:8057/256stream                  |
+//  | copy to dir defined in $cfg['stream_covers_dir'] file named:           |
+//  | stream14.shoutcastsolutions.com.png                                    |
+//  +------------------------------------------------------------------------+
+
+$cfg['stream_covers_dir'] = 'covers/';
+
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Youtube search                                                         |
+//  +------------------------------------------------------------------------+
+//  | Show Youtube search results.                                           |
+//  +------------------------------------------------------------------------+
+
+$cfg['show_youtube_results'] = true;
+
+
+//  +------------------- END OF NEW IN O!MPD 1.06 ---------------------------+
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Tidal via upmpdcli                                                     |
+//  +------------------------------------------------------------------------+
+//  | O!MPD can play Tidal's music using streams prepared by upmpdcli-tidal. |
+//  | Enter here url of that stream. Basicaly it consists of ip address      |
+//  | of computer where upmpdlci is installed, port number and some control  |
+//  | string, e.g.:                                                          |
+//  |                                                                        |
+//  | http://192.168.1.100:49149/tidal/track?version=1&trackId=              |
+//  |                                                                        |
+//  | All you have to change in above url is ip address and port.            |
+//  | Port should be the same as plgmicrohttpport in /etc/upmpdcli.conf      |
+//  |                                                                        |
+//  | Using Tidal via upmpdcli lets you use mpd without Tidal plugin.        |
+//  |                                                                        |
+//  | Section 'Tidal' above must also be defined.                            |
+//  +------------------------------------------------------------------------+
+
+$cfg['upmpdcli_tidal'] = "";
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Track dynamic range                                                    |
+//  +------------------------------------------------------------------------+
+//  | Show DR colum for track in Now Playing, album view and search results. |
+//  +------------------------------------------------------------------------+
+
+$cfg['show_DR'] = false;
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Track composer                                                         |
+//  +------------------------------------------------------------------------+
+//  | Show track composer in Now Playing.                                    |
+//  +------------------------------------------------------------------------+
+
+$cfg['show_composer'] = false;
+
+
+
+//  +------------------------------------------------------------------------------+
+//  | Play audio from Youtube                                                      |
+//  +------------------------------------------------------------------------------+
+//  | You can listen to YT movie audio stream by inserting address of YT           |
+//  | movie into Now Playing -> Add -> File/stream                                 |
+//  |                                                                              |
+//  | It requires youtube-dl (https://github.com/rg3/youtube-dl)                   |
+//  |                                                                              |
+//  | In general it should work with:                                              |
+//  | $cfg['python_path'] = '' and  $cfg['youtube-dl_path'] = 'youtube-dl'         |
+//  | but in my case I have to define full path to python and youtube-dl:          |
+//  | $cfg['python_path'] = '/share/HDA_DATA/.qpkg/Python3/src/bin/python3';       |
+//  | $cfg['youtube-dl_path'] = '/share/HDA_DATA/Download/youtube-dl/__main__.py'; |
+//  +------------------------------------------------------------------------------+
+unset($cfg['youtube_indicator']);
+
+$cfg['python_path'] = '';
+$cfg['youtube-dl_path'] = 'youtube-dl';
 $cfg['youtube-dl_options'] = '-j --no-check-certificate --prefer-insecure';
-$cfg['youtube_audio_format_name'] = '140 - audio only (DASH audio)';
+$cfg['youtube_audio_format_name'] = '140 - audio only (tiny)';
 $cfg['youtube_indicator'][] = 'www.youtube.';
 $cfg['youtube_indicator'][] = 'youtu.be/';
 $cfg['youtube_indicator'][] = 'm.youtube.';
 
 
 
-//  +------------------- END OF NEW IN O!MPD 1.04 ---------------------------+
+//  +------------------------------------------------------------------------+
+//  | Default album search action                                            |
+//  +------------------------------------------------------------------------+
+//  | One of $cfg['search_name'] from section 'Internet search'              |
+//  | which will be used as default search after clicking album cover        |
+//  | in album view                                                          |
+//  +------------------------------------------------------------------------+
+
+$cfg['default_search_name'] = 'Google';
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Discography browser                                                    |
+//  +------------------------------------------------------------------------+
+//  | Show thumbnails of all albums for given artist in album view           |
+//  +------------------------------------------------------------------------+
+
+$cfg['show_discography_browser'] = true;
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Miniplayer                                                             |
+//  +------------------------------------------------------------------------+
+//  | Show miniplayer at bottom of every the page                            |
+//  +------------------------------------------------------------------------+
+
+$cfg['show_miniplayer']					= true;
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Various artists                                                        |
+//  +------------------------------------------------------------------------+
+//  | Names used in ALBUM ARTIST or ARTIST tag for various artist albums     |
+//  +------------------------------------------------------------------------+
+unset($cfg['VA']);
+
+$cfg['VA'][]           = 'Various Artists';
+$cfg['VA'][]           = 'VA';
+$cfg['VA'][]           = 'Różni wykonawcy';
+
+
 
 
 //  +------------------------------------------------------------------------+
@@ -138,6 +301,7 @@ unset($cfg['album_versions_indicator']);
 $cfg['album_versions_indicator'][] = " (";
 $cfg['album_versions_indicator'][] = " [";
 $cfg['album_versions_indicator'][] = ", ";
+$cfg['album_versions_indicator'][] = ": ";
 
 
 
@@ -381,6 +545,7 @@ $cfg['artist_separator'][] = 	" and ";
 $cfg['artist_separator'][] = 	" with ";
 $cfg['artist_separator'][] = 	" feat. ";
 $cfg['artist_separator'][] = 	" ft. ";
+$cfg['artist_separator'][] = 	" + ";
 //$cfg['artist_separator'][] = 	", ";
 
 

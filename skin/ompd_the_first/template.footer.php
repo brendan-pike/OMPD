@@ -77,8 +77,30 @@ else {
 <?php }?>
 
 
-<span> Page <?php echo $curr_page . " of " . $last_page?> </span>
+<span> Page 
+<select id="paginationGoTo">
+	<?php 
+	for ($k=1; $k <= $last_page; $k++) {
+		$output['page'] = $k;
+		$url_page = $_SERVER["SCRIPT_NAME"] . "?" . http_build_query($output);
+		$sel = '';
+		if ($k == $curr_page) $sel = ' selected';
+		echo '<option value="' . $url_page . '"' . $sel . '>' . $k . '</option>';
+	}
+	?>
+</select>
 
+<script>
+$("#paginationGoTo").change(function()
+{
+    document.location.href = $(this).val();
+});
+</script>
+<?php echo " of " . $last_page?> </span>
+
+<!--
+<?php echo $curr_page . " of " . $last_page?> </span>
+-->
 
 <?php if ($curr_page == $last_page) { ?>
 	<span><i class="fa fa-angle-right"></i></span>
@@ -122,6 +144,24 @@ $cfg['items_count'] = 0 ?>
 	</div>
 </div>
 
-
-
 <div class="back-to-top"><i class="fa fa-2x fa-arrow-circle-o-up"></i></div>
+
+<?php
+$action = get('action');
+if (NJB_SCRIPT != 'playlist.php' && strpos($action,'layerProfile') === false  && $action != 'license' && NJB_SCRIPT != 'message.php' && $cfg['username'] != '' && $cfg['show_miniplayer']) {
+$hasAccess = simpleAuthenticate('access_play');
+if ($hasAccess == 1) {
+?>
+	<div id="miniplayer">
+		<?php 
+		require_once('playlist-mini.php');
+		?>
+	</div>
+<?php
+}
+}
+?>
+
+
+
+

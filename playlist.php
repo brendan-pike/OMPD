@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -70,13 +70,28 @@ else
 
 
 $featuring = false;
-for ($i=0; $i < $listlength && !$featuring; $i++) {
-	$query = mysqli_query($db,'SELECT featuring FROM track WHERE featuring != "" AND relative_file = "' . mysqli_real_escape_string($db,$file[$i]) . '"');
-	if (mysqli_fetch_row($query)) $featuring = true;
-}
+
 if (count($file) == 0) {
-	message(__FILE__, __LINE__, 'warning', '[b]Playlist is empty[/b][br][br]
-	[url=index.php]Add[/url] some music!');
+	?>
+	
+	<table cellspacing="10" cellpadding="0" class="warning" align="center">
+	<tr>
+		<td rowspan="3" valign="top"><img src="<?php echo $cfg['img']; ?>medium_message_warning.png" alt=""></td>
+		<td><strong>Playlist is empty</strong><br><br><a href="index.php">Add</a> some music!</td>
+	</tr>
+	</table>
+	
+	<script>
+	var timer_id = 0;
+	var timer_function = 'ajaxRequest("play.php?action=playlistStatus&menu=playlist", evaluateStatus)';
+	var timer_delay = 1000;
+	function evaluateStatus (data) {
+		if (data.totalTracks > 0) {
+			location.reload();
+		}
+	}
+	</script>
+	<?php
 	require_once('include/footer.inc.php');
 	exit;
 }
@@ -84,14 +99,23 @@ if (count($file) == 0) {
 
 <!-- info + control -->
 <div id="info_area">
+
 <div id="image_container">
+	<!--
 	<div id="cover-spinner">
 		<img src="image/loader.gif" alt="">
 	</div>
+	-->
 	<div id="image">
 		<a href="index.php"><img id="image_in" src="image/transparent.gif" alt=""></a>
 	</div>
+		<div id="waitIndicatorImg"></div>
 </div>
+
+<script>
+/* 	$('#image').css('position', 'absolute');
+	$('#image').css('top', '0'); */
+</script>
 
 <div class="pl-track-info-right">
 <div class="pl-track-info" id="pl-track-info">
@@ -99,6 +123,14 @@ if (count($file) == 0) {
 	<div class="pl-fld-name">track title</div>
 	<div class="pl-track-artist"><span id="artist">&nbsp;</span></div>
 	<div class="pl-fld-name">track artist</div>
+	<?php 
+	if($cfg['show_composer']) {
+	?>
+	<div class="pl-track-artist"><span id="composer">&nbsp;</span></div>
+	<div class="pl-fld-name" id="composer_label">track composer</div>
+	<?php 
+	}
+	?>
 	<div class="pl-track-artist"><span id="album">&nbsp;</span></div>
 	<div class="pl-fld-name">album</div>
 	<div class="pl-track-artist"><span id="genre">&nbsp;</span></div>
@@ -143,7 +175,7 @@ if (count($file) == 0) {
 		<span class="icon-anchor" name="time" id="time" style="text-align: right; padding-right:1px;"></span>
 		<div id="track-progress" class="out pointer" style="display:inline-block;" onClick="ajaxRequest('play.php?action=seekImageMap&amp;dx=' + this.clientWidth + '&amp;x=' + getRelativeX(event, this) + '&amp;menu=playlist', evaluatePlaytime);">
 			<div id="bar-indicator"></div>
-			<div id="timebar" style="width: 0px; overflow: hidden;" class="in"></div>
+			<div id="timebar" style=" overflow: hidden;" class="in-static"></div>
 			
 		</div>
 		<span class="playlist_status_off" name="tracktime" id="tracktime" style="text-align: left; padding-left: 1px; display: inline;"></span>
@@ -206,6 +238,9 @@ if (count($file) == 0) {
 	<td class="time">Artist</td>
 	<td class="time pl-genre">Genre</td>
 	<td class="time pl-year">Year</td>
+	<?php if ($cfg['show_DR']){ ?>
+	<td class="pl-tdr">DR</td>
+	<?php } ?>
 	<td class="time">Time</td>
 	<td class="iconDel"></td><!-- optional delete -->
 </tr>
@@ -214,34 +249,24 @@ $playtime = array();
 $track_id = array();
 $playlistTT = 0;
 for ($i=0; $i < $listlength; $i++) {
+	$image_id = array();
 	//streaming track outside of mpd library	
 	$pos = strpos($file[$i],'track_id=');	
 	if ($pos === false) {
-		$query = mysqli_query($db,'SELECT track.title, track.artist, track.track_artist, track.featuring, track.miliseconds, track.track_id, track.genre, album.genre_id, track.audio_dataformat, track.audio_bits_per_sample, track.audio_sample_rate, track.album_id, track.number, track.track_id, track.year as trackYear FROM track, album WHERE track.album_id=album.album_id AND track.relative_file = "' . 	mysqli_real_escape_string($db,$file[$i]) . '"');
-	} 
+		$query = mysqli_query($db,'SELECT track.title, track.artist, track.track_artist, track.featuring, track.miliseconds, track.track_id, track.genre, album.genre_id, track.audio_dataformat, track.audio_bits_per_sample, track.audio_sample_rate, track.album_id, track.number, track.track_id, track.dr, track.year as trackYear FROM track, album WHERE track.album_id=album.album_id AND track.relative_file = "' . 	mysqli_real_escape_string($db,$file[$i]) . '"');
+	}	
 	else {
 		$t_id = substr($file[$i],$pos + 9, 19);
-		$query = mysqli_query($db,'SELECT track.title, track.artist, track.track_artist, track.featuring, track.miliseconds, track.track_id, track.genre, album.genre_id, track.audio_dataformat, track.audio_bits_per_sample, track.audio_sample_rate, track.album_id, track.number, track.track_id, track.year as trackYear FROM track, album WHERE track.album_id=album.album_id AND track.track_id = "' . 	mysqli_real_escape_string($db,$t_id) . '"');
+		$query = mysqli_query($db,'SELECT track.title, track.artist, track.track_artist, track.featuring, track.miliseconds, track.track_id, track.genre, album.genre_id, track.audio_dataformat, track.audio_bits_per_sample, track.audio_sample_rate, track.album_id, track.number, track.track_id, track.dr, track.year as trackYear FROM track, album WHERE track.album_id=album.album_id AND track.track_id = "' . 	mysqli_real_escape_string($db,$t_id) . '"');
 	}
 	$table_track = mysqli_fetch_assoc($query);
+	
 	$playtime[] = (int) $table_track['miliseconds'];
-	$playlistTT = $playlistTT + (int) $table_track['miliseconds'];
+	//$playlistTT = $playlistTT + (int) $table_track['miliseconds'];
 	$track_id[] = (string) $table_track['track_id'];
 	
 	$album_genres = parseMultiGenre($table_track['genre']);
 	
-	/* $genres = explode(';',$table_track['genre_id']);
-	$where = '';
-	foreach ($genres as $g){
-		$where = ($where == '') ? ' genre_id LIKE "' . $g . '"' : $where . ' OR genre_id LIKE "' . $g . '"';
-	}
-	$query = mysqli_query($db,'SELECT genre, genre_id FROM genre WHERE ' . $where);
-	while ($genre = mysqli_fetch_assoc($query)){
-		$album_genres[$genre['genre_id']] = $genre['genre'];
-		//$album['album_genre'] = $album['album_genre'] . '; ' . $genre['genre'];
-	} */
-	
-	//$genre_id[] = (string) $table_track['genre_id'];
 	$number[] = (string) $table_track['number'];
 	
 	$is_file_stream = false;
@@ -251,15 +276,44 @@ for ($i=0; $i < $listlength; $i++) {
 	}
 	//track not found in OMPD DB - take info from MPD, unless this is a stream of file
 	if (!isset($table_track['artist']) && !$is_file_stream) {
-		
+		$tidalTrack = '';
 		$playlistinfo = mpd('playlistinfo ' . $i);
 		if (strpos($playlistinfo['file'],'ompd_title=') !== false){
 			//stream from Youtube
+			$table_track['youtube'] = true;
 			$parts = parse_url($playlistinfo['file']);
 			parse_str($parts['query'], $query);
 			$table_track['title'] = urldecode($query['ompd_title']);
 			$table_track['album'] = urldecode($query['ompd_webpage']);
 			$playlistinfo['Time'] = (int)urldecode($query['ompd_duration']);
+			$table_track['track_artist'] = urldecode($query['ompd_artist']);
+			$table_track['cover'] = urldecode($query['ompd_thumbnail']);
+			$table_track['trackYear'] = urldecode($query['ompd_year']);
+		}
+		elseif (strpos($playlistinfo['file'],'tidal://') !== false || ($cfg['upmpdcli_tidal'] && strpos($playlistinfo['file'],$cfg['upmpdcli_tidal']) !== false) || strpos($playlistinfo['file'],TIDAL_TRACK_STREAM_URL) !== false || strpos($playlistinfo['file'],'action=streamTidal') !== false) {
+			//stream from Tidal unrecognized by mpd
+			/* $split = explode("/", $playlistinfo['file']);
+			$tidalTrackId = $split[count($split)-1]; */
+			$tidalTrackId = getTidalId($playlistinfo['file']);
+			$track_id[$i] = 'tidal_' . $tidalTrackId;
+			$query = mysqli_query($db, "SELECT tidal_track.title, tidal_track.artist, tidal_track.seconds, tidal_track.number, tidal_track.genre_id, tidal_album.album, tidal_album.album_date, tidal_album.album_id FROM tidal_track LEFT JOIN tidal_album ON tidal_track.album_id = tidal_album.album_id WHERE track_id = '" . $tidalTrackId . "' LIMIT 1");
+			$tidalTrack = mysqli_fetch_assoc($query);
+			
+			if ($tidalTrack) {
+				$table_track['title'] = $tidalTrack['title'];
+				$table_track['track_artist'] = $tidalTrack['artist'];
+				$table_track['album'] = $tidalTrack['album'];
+				$table_track['miliseconds'] = ((int) $tidalTrack['seconds']) * 1000;
+				$table_track['number'] = $tidalTrack['number'];
+				$album_date = new DateTime($tidalTrack['album_date']);
+				$table_track['trackYear'] = $album_date->format('Y');
+				$table_track['track_id'] = 'tidal_' . $tidalTrack['album_id'];
+			}
+			else {
+				$table_track['title'] = 'Tidal track_id ' . $tidalTrackId;
+				$table_track['track_artist'] = "";
+				$table_track['album'] = "";
+			}
 		}
 		else {
 			if (isset($playlistinfo['Artist'])) 
@@ -279,12 +333,13 @@ for ($i=0; $i < $listlength; $i++) {
 			else 
 				$table_track['album']	= $playlistinfo['file'];
 		}
-		
-		$table_track['number'] = $playlistinfo['Pos'] + 1;
-		$table_track['trackYear'] = $playlistinfo['Date'];
-		$table_track['genre'] = $playlistinfo['Genre'];
-		$table_track['miliseconds'] = $playlistinfo['Time'] * 1000;
-		
+		if (!$tidalTrack) {
+			$table_track['number'] = $playlistinfo['Pos'] + 1;
+			if (!$table_track['trackYear']) $table_track['trackYear'] = $playlistinfo['Date'];
+			$table_track['genre'] = $playlistinfo['Genre'];
+			$album_genres = parseMultiGenre($table_track['genre']);
+			$table_track['miliseconds'] = $playlistinfo['Time'] * 1000;
+		}
 	}
 	//this is stream of a file
 	elseif ($is_file_stream) {
@@ -297,13 +352,29 @@ for ($i=0; $i < $listlength; $i++) {
 		$pos = strpos($filepath, $table_track['title']);
 		$table_track['album'] = substr($filepath, 0, $pos);
 	}
-	$query2 = mysqli_query($db,'SELECT album, year, image_id FROM album WHERE album_id="' . $table_track['album_id'] . '"');
-	$image_id = mysqli_fetch_assoc($query2);
+	//if ($table_track['cover']) { //for youtube streams
+	if ($table_track['youtube']) { //for youtube streams
+		$src = "image_crop.php?thumbnail=" . $table_track['cover'];
+	}
+	else {
+		$query2 = mysqli_query($db,'SELECT album, year, image_id FROM album WHERE album_id="' . $table_track['album_id'] . '"');
+		$image_id = mysqli_fetch_assoc($query2);
+		$src = "image.php?image_id=" . $image_id['image_id'] . "&track_id=" . $table_track['track_id'];
+		if (!$image_id['image_id']) {
+			$imageFile = $cfg['stream_covers_dir'] . parse_url($file[$i], PHP_URL_HOST);
+			if (file_exists($imageFile . '.jpg')) {
+				$src = $imageFile . '.jpg';
+			}
+			elseif (file_exists($imageFile . '.png')) {
+				$src = $imageFile . '.png';
+			}
+		}
+	}
 ?>
 <tr class="<?php if ($i == $listpos) echo 'select'; else echo ($i & 1) ? 'even mouseover' : 'odd mouseover'; ?>" id="track<?php echo $i; ?>" style="display:table-row;">
 	
 	<td class="small_cover">
-	<a id="track<?php echo $i; ?>_image" href="javascript:ajaxRequest('play.php?action=playIndex&amp;index=<?php echo $i ?>&amp;menu=playlist',evaluateListpos);"><img src="image.php?image_id=<?php echo $image_id['image_id'] ?>&track_id=<?php echo $table_track['track_id'] ?>" alt="" width="100%"></a></td>
+	<a id="track<?php echo $i; ?>_image" href="javascript:ajaxRequest('play.php?action=playIndex&amp;index=<?php echo $i ?>&amp;menu=playlist',evaluateListpos);"><img src="<?php echo $src; ?>" alt="" width="100%"></a></td>
 	
 	<td class="play-indicator">
 	<div id="track<?php echo $i; ?>_play" style="<?php if ($i == $listpos) echo 'visibility: visible;'; else echo 'visibility: hidden;'; ?>" onclick="javascript:ajaxRequest('play.php?action=playIndex&amp;index=<?php echo $i ?>&amp;menu=playlist',evaluateListpos);">
@@ -328,7 +399,7 @@ for ($i=0; $i < $listlength; $i++) {
 	?>
 	<td class="time"><a href="javascript:ajaxRequest('play.php?action=playIndex&amp;index=<?php echo $i ?>&amp;menu=playlist',evaluateListpos);" id="track<?php echo $i; ?>_title"><div class="playlist_title <?php echo $break_method; ?>"><?php echo html($table_track['title']) ?></div>
 		<?php 
-		if ($image_id['album']) {
+		if ($image_id['album'] && !$table_track['youtube']) {
 			$album_name = $image_id['album'];
 		} 
 		else { 
@@ -356,7 +427,10 @@ for ($i=0; $i < $listlength; $i++) {
 		if ($l > 1) {
 			for ($j=0; $j<$l; $j++) {
 				$artist = $artist . '<a href="index.php?action=view2&amp;artist=' . rawurlencode($exploded[$j]) . '">' . html($exploded[$j]) . '</a>';
-				if ($j != $l - 1) $artist = $artist . '<a href="index.php?action=view2&amp;artist=' . rawurlencode($table_track['track_artist']) . '&amp;order=year"><span class="artist_all">&</span></a>';
+				if ($j != $l - 1) {
+					$delimiter = getInbetweenStrings($exploded[$j],$exploded[$j + 1], $table_track['track_artist']);
+					$artist = $artist . '<a href="index.php?action=view2&amp;artist=' . rawurlencode($table_track['track_artist']) . '&amp;order=year"><span class="artist_all">' . $delimiter[0] . '</span></a>';
+				}
 			}
 			echo $artist;
 		}
@@ -375,6 +449,9 @@ for ($i=0; $i < $listlength; $i++) {
 	<?php 
 		}
 	}
+	else {
+			echo $table_track['genre'];
+	}
 	?>
 	</td>
 	
@@ -385,8 +462,27 @@ for ($i=0; $i < $listlength; $i++) {
 	<td class="time pl-year">
 	<a href="index.php?action=view2&order=artist&sort=asc&year=<?php echo $year ?>"><?php echo $year ?></a>
 	</td>
+
+	<?php if ($cfg['show_DR']){ 
+	$tdr = ($table_track['dr'] === NULL ? '-' : $table_track['dr']);
+	?>
+	<td class="time pl-tdr">
+	<?php echo $tdr ?>
+	</td>
+	<?php } ?>
 	
-	<td class="time"><?php if (isset($table_track['miliseconds'])) echo formattedTime($table_track['miliseconds']); ?></td>
+	<td class="time" id="time_<?php echo $i; ?>_<?php echo round($table_track['miliseconds']/1000) * 1000; ?>">
+		<?php 
+		if ($table_track['miliseconds'] > 0) {
+			echo formattedTime($table_track['miliseconds']); 
+			if ($playlistTT > -1) {
+				$playlistTT = $playlistTT + round($table_track['miliseconds']/1000) * 1000;
+			}
+		}
+		else {
+			$playlistTT = -1;
+		}
+		?></td>
 
 	
 	<td class="iconDel">
@@ -459,6 +555,8 @@ var fromPosition			= -1
 $("#time").click(function(){
 	$.ajax({url: "play.php?action=beginOfTrack&menu=playlist"});
 });
+ 
+var testing = '<?php echo $cfg['testing']; ?>';
 
 
 function hidePL() {
@@ -523,33 +621,37 @@ function initialize() {
 
 
 function evaluateStatus(data) {
+	
 	// data.hash, data.miliseconds, data.listpos, data.volume
 	// data.isplaying, data.repeat, data.shuffle, data.gain
 	
 	if (previous_hash != data.hash) {
 		//window.location.href="<?php echo NJB_HOME_URL ?>playlist.php";
-		location.reload(false);
+		window.location.href = "playlist.php?scrollTo=" + $(window).scrollTop();
+		//location.reload(false);
 		//window.location.href = window.location.href;
 		//history.go();
 	}
 	data.max = playtime[data.listpos];
-	if (!current_track_id) { //track not found in DB, get data from MPD
+	if (!current_track_id || current_track_id.indexOf('tidal_') > -1) { //track not found in DB, get data from MPD
+		if (current_track_id.indexOf('tidal_') == -1) {
+			var title = data.title;
+			document.getElementById('title1').innerHTML = document.getElementById('title').innerHTML =  title;
+			var query_artist = '';
+			if (data.track_artist) {
+				query_artist = data.track_artist;
+			}
+			document.getElementById('lyrics1').innerHTML = document.getElementById('lyrics').innerHTML = '<a href="ridirect.php?query_type=lyrics&q=' + encodeURIComponent(query_artist) + '+' + encodeURIComponent(data.title) + '" target="_blank"><i class="fa fa-search"></i>&nbsp;Lyrics</a>';
+		}
 		data.max = data.Time;
-		var title = data.title;
 		/* if (title.indexOf("action=streamTo") != -1) {
 			title = data.name; 
 		} */
-		document.getElementById('title1').innerHTML = document.getElementById('title').innerHTML =  title;
 		var rel_file = encodeURIComponent(data.relative_file);
 		//console.log ("rel_file=" + rel_file);
 		var params = data.audio_dataformat + '&nbsp;&bull;&nbsp;' + data.audio_bits_per_sample + 'bit - ' + data.audio_sample_rate/1000 + 'kHz&nbsp;&bull;&nbsp;' + data.audio_profile;
 		document.getElementById('parameters').innerHTML = params;
 		
-		var query_artist = '';
-		if (data.track_artist) {
-			query_artist = data.track_artist;
-		}
-		document.getElementById('lyrics1').innerHTML = document.getElementById('lyrics').innerHTML = '<a href="ridirect.php?query_type=lyrics&q=' + encodeURIComponent(query_artist) + '+' + encodeURIComponent(data.title) + '" target="_blank"><i class="fa fa-search"></i>&nbsp;Lyrics</a>';
 		
 		$('#favorites').html('&nbsp;');
 		$('#favorites1').html('&nbsp;');
@@ -574,8 +676,7 @@ function evaluateStatus(data) {
 	evaluateIsplaying(data.isplaying, data.listpos);
 	evaluateVolume(data.volume);
 	evaluateGain(data.gain);
-	 
-	
+	evaluateConsume(data);
 }
 
 
@@ -583,20 +684,29 @@ function evaluateListpos(listpos) {
 	if (previous_listpos != listpos) {
 		document.getElementById('track' + previous_listpos).className = (previous_listpos & 1) ? 'even mouseover' : 'odd mouseover';
 		document.getElementById('track' + listpos).className = 'select';
-		document.getElementById('track' + listpos + '_play').style.visibility = 'visible';
 		document.getElementById('track' + previous_listpos + '_play').style.visibility  = 'hidden';
+		document.getElementById('track' + listpos + '_play').style.visibility = 'visible';
 		document.getElementById('time').innerHTML = formattedTime(0);
 		document.getElementById('timebar').style.width = 0;
 		ajaxRequest('play.php?action=playlistTrack&track_id=' + track_id[listpos] + '&menu=playlist', evaluateTrack);
 		previous_miliseconds = 0;
 		previous_listpos = listpos;
 	}
+	else hideSpinner();
 	//resizeImgContainer();
 }
 
 
 function evaluatePlaytime(data) {
 	// data.miliseconds, data.max, ....
+	<?php 
+	if ($playlistTT > -1) {
+		echo "var playlistTT = " . $playlistTT . ";";
+	}
+	else {
+		echo "var playlistTT = -1;";
+	}
+	?>
 	if (previous_miliseconds != data.miliseconds) {
 		document.getElementById('time').innerHTML = formattedTime(data.miliseconds);
 		var width_ = 0;
@@ -609,7 +719,7 @@ function evaluatePlaytime(data) {
 		$('#timebar').width(width_);
 		previous_miliseconds = data.miliseconds;
 	}
-	if(data.hasStream != 'true' && !data.repeat && !data.single && !data.shuffle){
+	/* if(data.hasStream != 'true' && !data.repeat && !data.single && !data.shuffle){
 		$("span[id^='end_time'").show();
 		$("span[id^='end_time'").html('End at: ' + data.end_time + '&nbsp;&bull;&nbsp;');
 		$("span[id^='end_in'").show();
@@ -618,13 +728,31 @@ function evaluatePlaytime(data) {
 	else {
 		$("span[id^='end_time'").hide();
 		$("span[id^='end_in'").hide();
-	}
-	if(data.hasStream != 'true'){
+	} */
+	if((data.hasStream != 'true' || playlistTT > -1) && !data.repeat && !data.single && !data.shuffle){
+		var tt1 = 0;
+		for (var k = data.listpos; k <= (data.totalTracks - 1); k++){
+			var plItem = "td[id^='time_" + k + "'";
+			var p = $(plItem).attr('id').split("_")[1];
+			var t = $(plItem).attr('id').split("_")[2];
+			if (p>=k) {
+				tt1 = (tt1 + parseInt(t));
+			}
+		}
+		var cDate = Math.floor(new Date().getTime() / 1000) * 1000;
+		var end_in = tt1 - data.miliseconds;
+		var end_time = new Date(cDate + end_in);
 		$("span[id^='total_time'").show();
-		$("span[id^='total_time'").html('Total: ' + data.total_time);
+		$("span[id^='total_time'").html('Total: ' + msToTime(playlistTT));
+		$("span[id^='end_time'").show();
+		$("span[id^='end_time'").html('End at: ' + end_time.getHours() + ':' + (end_time.getMinutes() < 10 ? '0' : '') + end_time.getMinutes() + '&nbsp;&bull;&nbsp;');
+		$("span[id^='end_in'").show();
+		$("span[id^='end_in'").html('Left: ' + msToTime(end_in) + '&nbsp;&bull;&nbsp;');
 	}
 	else {
 		$("span[id^='total_time'").hide();
+		$("span[id^='end_time'").hide();
+		$("span[id^='end_in'").hide();
 	}
 }
 
@@ -654,6 +782,10 @@ function evaluateVolume_old(volume) {
 
 function evaluateIsplaying(isplaying, idx) {
 	if (previous_isplaying != isplaying) {
+		if (isplaying.state){
+			idx = isplaying.idx;
+			isplaying = isplaying.state;
+		}
 		if (isplaying == 0) {
 			// stop
 			$("#time").removeClass();
@@ -662,13 +794,15 @@ function evaluateIsplaying(isplaying, idx) {
 			$("#play").addClass("playlist_status_off");
 			$("#play").html('<i class="fa fa-play sign-ctrl"></i>');
 			$("#play").attr("onclick","javascript:ajaxRequest('play.php?action=play&menu=playlist', evaluateIsplaying);");
-			$('#track' + idx + '_play').hide();
+			//$('#track' + idx + '_play').hide();
+			document.getElementById('track' + idx + '_play').style.visibility = 'hidden';
 			document.getElementById('time').innerHTML = formattedTime(0);
 			document.getElementById('timebar').style.width = 0;
 			previous_miliseconds = 0;
 		}
 		else if (isplaying == 1) {
 			// play
+			document.getElementById('track' + idx + '_play').style.visibility = 'visible';		
 			$("#time").removeClass();
 			$("#time").addClass("icon-anchor");
 			$("#play").html('<i class="fa fa-pause sign-ctrl"></i>');
@@ -676,7 +810,7 @@ function evaluateIsplaying(isplaying, idx) {
 			//$("#play").addClass("playlist_status_on");
 			$("#play").addClass("playlist_status_off");
 			$("#play").attr("onclick","javascript:ajaxRequest('play.php?action=pause&menu=playlist', evaluateIsplaying);");
-			$('#track' + idx + '_play').show();
+			//$('#track' + idx + '_play').show();
 		}
 		else if (isplaying == 3) {
 			// pause
@@ -687,9 +821,11 @@ function evaluateIsplaying(isplaying, idx) {
 			//$("#play").addClass("blink_me playlist_status_on");
 			$("#play").addClass("playlist_status_off");
 			$("#play").attr("onclick","javascript:ajaxRequest('play.php?action=play&menu=playlist', evaluateIsplaying);");
-			$('#track' + idx + '_play').hide();
+			//$('#track' + idx + '_play').hide();
+			document.getElementById('track' + idx + '_play').style.visibility = 'hidden';
 		}
-		previous_isplaying = isplaying
+		previous_isplaying = isplaying;
+		console.log('isplaying:' + isplaying + '; idx: ' + idx);
 	}
 }
 
@@ -772,6 +908,7 @@ function _evaluateFavorite(data) {
 function evaluateTrackVersion(data) {
 	$('#title1_wait_indicator').hide();
 	$('#title_wait_indicator').hide();
+
 	if (data.other_track_version) {
 		var track_ids = '';
 		for (var i = 0; i < data['track_ids'].length; i++) {
@@ -789,12 +926,12 @@ function evaluateTrackVersion(data) {
 		  $( "#title1" ).click();
 		})
 	}
-	else {
+	/* else {
 		$('#title1').removeClass('icon-anchor');
 		$('#title').removeClass('icon-anchor');
 		$('#title1').off('click');
 		$('#title').off('click');
-	}
+	} */
 }
 
 function evaluateTrack(data) {
@@ -807,6 +944,10 @@ function evaluateTrack(data) {
 	current_track_id = data.track_id;
 	if (previous_track_id != data.track_id && data.track_id != null) {
 		//console.log('previous_track_id=' + previous_track_id);
+		$('#title1').removeClass('icon-anchor');
+		$('#title').removeClass('icon-anchor');
+		$('#title1').off('click');
+		$('#title').off('click');
 		$('#title1_wait_indicator').show();
 		$('#title_wait_indicator').show();
 		//console.log('track_id=' + data.track_id);
@@ -826,32 +967,79 @@ function evaluateTrack(data) {
 			$('#fileInfoForDbTracks').css('visibility', 'visible');
 	}
 	
-	$("#cover-spinner").show();
 	var s = Math.floor(data.miliseconds / 1000);  
 	var m = Math.floor(s / 60);  
 	s = s % 60;
 	if (s < 10) s = '0' +  s;
 	
+	<?php 
+	if ($cfg['show_composer']) {
+		echo 'var show_composer = true;';
+	}
+	else {
+		echo 'var show_composer = false;';
+	}
+	
+	?>
 	
 	document.getElementById('tracktime').innerHTML = m + ':' + s;
 	artist = '';
-	l = data.track_artist.length;
-	if (l>1) {
-		for (i=0; i<l; i++) {
-			artist = artist + '<a href="index.php?action=view2&order=year&sort=asc&artist=' + encodeURIComponent(data.track_artist_url[i]) + '">' + data.track_artist[i] + '</a>';
-			if (i!=l-1) {
-			artist = artist + '<a href="index.php?action=view2&order=artist&sort=asc&artist=' + data.track_artist_url_all + '"><span class="artist_all">&</span></a>'
+	if ($.isArray(data.track_artist)) {
+		l = data.track_artist.length;
+		if (l>1) {
+			for (i=0; i<l; i++) {
+				artist = artist + '<a href="index.php?action=view2&order=year&sort=asc&artist=' + encodeURIComponent(data.track_artist_url[i]) + '">' + data.track_artist[i] + '</a>';
+				if (i!=l-1) {
+					var delimiter = data.track_artist_all.match(escapeRegExp(data.track_artist_url[i]) + "(.*)" + escapeRegExp(data.track_artist_url[i+1]));
+					if (testing == 'on') {
+						delimiter[1] = delimiter[1].replace(';','&');
+					}
+					artist = artist + '<a href="index.php?action=view2&order=artist&sort=asc&artist=' + data.track_artist_url_all + '"><span class="artist_all">' + delimiter[1] + '</span></a>';
+				}
 			}
+		} 
+		else if (l>0) {
+			artist = '<a href="index.php?action=view2&order=year&sort=asc&artist=' + encodeURIComponent(data.track_artist_url[0]) + '">' + data.track_artist[0] + '</a>';
 		}
-	} 
-	else if (l>0) {
-		artist = '<a href="index.php?action=view2&order=year&sort=asc&artist=' + encodeURIComponent(data.track_artist_url[0]) + '">' + data.track_artist[0] + '</a>';
 	}
-	/* else {
-		artist = '&nbsp;';
-	} */
+	else {
+		artist = '<a href="index.php?action=view2&order=year&sort=asc&artist=' + data.track_artist_url_all + '">' + data.track_artist + '</a>';
+	}
 	
 	document.getElementById('artist1').innerHTML = (data.track_artist[0] == '&nbsp;') ? '&nbsp;' : 'by ' + artist;
+	
+	composer = '';
+	if (show_composer) { 
+		if ($.isArray(data.track_composer)) {
+			l = data.track_composer.length;
+			if (l>1) {
+				for (i=0; i<l; i++) {
+					composer = composer + '<a href="index.php?action=view2&order=year&sort=asc&artist=' + encodeURIComponent(data.track_composer_url[i]) + '">' + data.track_composer[i] + '</a>';
+					if (i!=l-1) {
+						var delimiter = data.track_composer_all.match(data.track_composer_url[i] + "(.*)" + data.track_composer_url[i+1]);
+						if (testing == 'on') {
+							delimiter[1] = delimiter[1].replace(';','&');
+						}
+						composer = composer + '<a href="index.php?action=view2&order=artist&sort=asc&artist=' + data.track_composer_url_all + '"><span class="artist_all">' + delimiter[1] + '</span></a>';
+					}
+				}
+			} 
+			else if (l>0) {
+				composer = '<a href="index.php?action=view2&order=year&sort=asc&artist=' + encodeURIComponent(data.track_composer_url[0]) + '">' + data.track_composer[0] + '</a>';
+			}
+		}
+		else {
+			composer = '<a href="index.php?action=view2&order=year&sort=asc&artist=' + data.track_composer_url_all + '">' + data.track_composer + '</a>';
+		}
+		$('#composer').show();
+		$('#composer_label').show();
+		document.getElementById('artist1').innerHTML = (data.track_composer == '') ? document.getElementById('artist1').innerHTML : document.getElementById('artist1').innerHTML + ' (' + composer + ')';
+		document.getElementById('composer').innerHTML = composer; 
+		if (data.track_composer == '') {
+			document.getElementById('composer').innerHTML = '-'; 
+		}
+	}
+
 	document.getElementById('artist').innerHTML = artist; 
 	document.getElementById('track_number1').innerHTML = document.getElementById('track_number').innerHTML = data.number;
 	document.getElementById('title1').innerHTML = document.getElementById('title').innerHTML =  data.title;
@@ -861,7 +1049,7 @@ function evaluateTrack(data) {
 		document.getElementById('album1').innerHTML = (data.album == '&nbsp;') ? '&nbsp' : 'from ' + albumLink; 
 		document.getElementById('album').innerHTML = albumLink;
 	}
-	else if (al.indexOf("://") > 0) {
+	else if (al.indexOf("://") > 0 && al.indexOf("://") < 6) {
 		//e.g. stream from youtube 
 		var albumLink = '<a href="' + data.album + '" target="_new">' + data.album + '</a>';
 		document.getElementById('album1').innerHTML = (data.album == '&nbsp;') ? '&nbsp' : 'from ' + albumLink; 
@@ -883,7 +1071,9 @@ function evaluateTrack(data) {
 	else if(data.genre) document.getElementById('genre1').innerHTML = document.getElementById('genre').innerHTML = data.genre;
 	else document.getElementById('genre1').innerHTML = document.getElementById('genre').innerHTML = '&nbsp;';
 	 */
-	if (data.genres) {
+	//console.log('data.genres.length: ' + JSON.stringify(data.genres));
+	//empty genres has string '[]', not empty is longer then 2
+	if (JSON.stringify(data.genres).length > 2) {
 		var inner_html = '';
 		$.each(data.genres, function(key, value){
 			if (inner_html == ''){
@@ -894,10 +1084,15 @@ function evaluateTrack(data) {
 			}
 		});
 		document.getElementById('genre1').innerHTML = document.getElementById('genre').innerHTML = inner_html;
-	}
+	} 
 	else if(data.genre_id == '-1') document.getElementById('genre1').innerHTML = document.getElementById('genre').innerHTML = data.genre;
-	else document.getElementById('genre1').innerHTML = document.getElementById('genre').innerHTML = '&nbsp;';
+	else {
+		document.getElementById('genre1').innerHTML = '';
+		document.getElementById('genre').innerHTML = '-';
+	}
 	
+	//console.log ('data.genre_id=' + data.genre_id);
+
 	//var rel_file = encodeURIComponent(data.relative_file);
 	var rel_file = encodeURIComponent(data.relative_file);
 	//console.log ("rel_file=" + rel_file);
@@ -987,26 +1182,58 @@ function evaluateTrack(data) {
 		//$("#image_in").attr("src",data.thumbnail);
 		$("#image a").attr("href",data.thumbnail);
 	}
-	else document.getElementById('image').innerHTML = '<a href="#"><img id="image_in" src="<?php echo 'image/'; ?>large_file_not_found.png" alt=""></a>';
-	$("#cover-spinner").hide();
+	else if (data.imageFile) {
+		//image for e.g. radio stations
+		$("#image_in").attr("src",data.imageFile);
+	}
+	else {
+		document.getElementById('image').innerHTML = '<a href="#"><img id="image_in" src="<?php echo 'image/'; ?>large_file_not_found.png" alt=""></a>';
+		$("#waitIndicatorImg").hide();
+	}
+	//$("#cover-spinner").hide();
+	
 	
 	changeTileSizeInfo();
 	resizeImgContainer();
+	getFavoritesList(current_track_id);
 	
+	/* spinnerImg.stop();
+	$('#image').css('position', 'relative');*/
+	//$("#waitIndicatorImg").hide(); 
 }
 
-
+function msToTime(s) {
+	var t = 0;
+	var ms = s % 1000;
+	s = (s - ms) / 1000;
+	var secs = s % 60;
+	s = (s - secs) / 60;
+	var mins = s % 60;
+	var hrs = (s - mins) / 60;
+	
+	if (mins < 10) {
+		mins = '0' + mins;
+	}
+	
+	if (secs < 10) {
+		secs = '0' + secs;
+	}
+	
+	if (hrs > 0) {
+		t = hrs + ':' + mins + ':' + secs;
+	}
+	else {
+		t = mins + ':' + secs;
+	}
+	return t;
+}
 
 $(document).ready(function() {
-	
-				resizeImgContainer();
 				
 				$('.showPL').click(function(){
-
 					$('html, body').animate({
 						scrollTop: ($(".select").offset().top - $("#fixedMenu").height())
 					}, 1000);
-
 				 });
 
 				$('.hidePL').click(function(){
@@ -1027,9 +1254,25 @@ $(document).ready(function() {
 					//resizeCover();
 					resizeImgContainer();
 				});
-				 
+				
+				$('#play').longpress(function(e) {
+					ajaxRequest('play.php?action=stop&menu=playlist', evaluateIsplaying);
+				}, function(e) {
+						//ajaxRequest('play.php?action=play&menu=playlist', evaluateIsplaying);
+				});
+				/* //proper display cover when using spin.js as spinner
+				$('#image').css('position', 'absolute');
+				$('#image').css('top', '0'); */
+				
+				resizeImgContainer();
+				
+				<?php if (get('scrollTo')){
+				?>
+					var scrollTo = <?php echo get('scrollTo') ?>;
+					$(window).scrollTop(scrollTo);
+				<?php
+				} ?>
 });
-
 
 
 </script>

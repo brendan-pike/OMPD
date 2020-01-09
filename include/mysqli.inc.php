@@ -1,7 +1,7 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant	                           |
-//  | http://www.ompd.pl                                             		     |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
+//  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
 //  | netjukebox, Copyright © 2001-2012 Willem Bartels                       |
@@ -162,7 +162,7 @@ function updateDatabase() {
 	if ($cfg['database_version'] < 28 || $cfg['database_version'] > NJB_DATABASE_VERSION) {
 		message(__FILE__, __LINE__, 'error', '[b]MySQL update error[/b][br]'
 			. 'Incremental upgrade is not supported from this database version.'
-			. '[list][*]Delete your old database.[*]On the next start O!MPD automatic creates a new MySQL database and table structure.[/list]');
+			. '[list][*]Delete your old database.[*]On the next start O!MPD automaticly creates a new MySQL database and table structure.[/list]');
 	}
 	else {
 		for ($i = $cfg['database_version'] + 1; $i <= NJB_DATABASE_VERSION; $i++)

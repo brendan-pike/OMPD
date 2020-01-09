@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -34,16 +34,20 @@ $cfg['menu'] = 'favorite';
 
 $action 		= getpost('action');
 $favorite_id	= getpost('favorite_id');
+$favorite_name	= getpost('plName');
 
 
 if		($action == '')							home();
 elseif	($action == 'editFavorite')				editFavorite($favorite_id);
+elseif	($action == 'editFavoriteMPD')		editFavoriteMPD($favorite_id);
+elseif	($action == 'viewTidalPlaylist')		viewTidalPlaylist($favorite_id, $favorite_name);
 elseif	($action == 'addFavorite')	 			addFavorite();
 elseif	($action == 'saveFavorite') 			saveFavorite($favorite_id);
 elseif	($action == 'importPlaylist')			importFavorite($favorite_id, 'import');
 elseif	($action == 'addPlaylist')				importFavorite($favorite_id, 'add');
 elseif	($action == 'importPlaylistUrl')		importFavorite($favorite_id, 'importUrl');
 elseif	($action == 'addPlaylistUrl')			importFavorite($favorite_id, 'addUrl');
+elseif	($action == 'deleteFavoriteMPD') 			deleteFavoriteMPD($favorite_id);
 elseif	($action == 'deleteFavorite') 			deleteFavorite($favorite_id);
 elseif	($action == 'deleteFavoriteItem')		deleteFavoriteItem($favorite_id);
 else	message(__FILE__, __LINE__, 'error', '[b]Unsupported input value for[/b][br]action');
@@ -74,7 +78,7 @@ function home() {
 </div>
 <?php }
 	?>
-<table cellspacing="0" cellpadding="0" class="border">
+<table cellspacing="0" cellpadding="0" class="border tabFixed break-word">
 <tr class="header">
 	
 	<td class="icon"></td><!-- optional play -->
@@ -89,14 +93,22 @@ function home() {
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?> mouseover">
 	
 	<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=playSelect&amp;random=new\',evaluateAdd);" onMouseOver="return overlib(\'Play random tracks\');" onMouseOut="return nd();"><i id="play_random" class="fa fa-play-circle-o fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=addSelect&amp;random=new\',evaluateAdd);" onMouseOver="return overlib(\'Add random tracks to playlist\');" onMouseOut="return nd();"><i id="add_random" class="fa fa-plus-circle fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td><?php if ($cfg['access_stream']) echo '<a href="stream.php?action=playlist&amp;random=new&amp;stream_id=' . $cfg['stream_id'] . '" onMouseOver="return overlib(\'Stream random tracks\');" onMouseOut="return nd();"><i class="fa fa-rss fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td><?php if ($cfg['access_play']) 		echo '<a href="javascript:ajaxRequest(\'play.php?action=playSelect&amp;random=new\');" onMouseOver="return overlib(\'Play random tracks\');" onMouseOut="return nd();">Random tracks</a>';
 						elseif ($cfg['access_stream'])	echo '<a href="stream.php?action=playlist&amp;random=new&amp;stream_id=' . $cfg['stream_id']  . '" onMouseOver="return overlib(\'Stream random tracks\');" onMouseOut="return nd();">Random tracks</a>'; 
-						else echo 'Random tracks'; ?></td>
+						else echo 'Random tracks'; ?>
+	</td>
+						
 	<td>Play random tracks from library</td>
+	
 	<td></td>
+	
 	<td><?php if ($cfg['access_media']) echo '<a href="genre.php?action=blacklist" onMouseOver="return overlib(\'Edit random blacklist\');" onMouseOut="return nd();"><i class="fa fa-pencil fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td></td>
 </tr>
 <?php
@@ -118,19 +130,149 @@ function home() {
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?> mouseover">
 	
 	<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=playSelect&amp;favorite_id=' . $favorite['favorite_id'] . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Play\');" onMouseOut="return nd();"><i id="play_' . $favorite['favorite_id'] . '" class="fa fa-play-circle-o fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=addSelect&amp;favorite_id=' . $favorite['favorite_id'] . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Add to playlist\');" onMouseOut="return nd();"><i id="add_' . $favorite['favorite_id'] . '" class="fa fa-plus-circle fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td><?php if ($cfg['access_stream']) echo '<a href="stream.php?action=playlist&amp;favorite_id=' . $favorite['favorite_id'] . ($favorite['stream'] == false ? '&amp;stream_id=' . $cfg['stream_id'] : '') . '" onMouseOver="return overlib(\'Stream\');" onMouseOut="return nd();"><i class="fa fa-rss fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td><?php if ($cfg['access_play'])								echo '<a href="javascript:ajaxRequest(\'play.php?action=playSelect&amp;favorite_id=' . $favorite['favorite_id'] . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Play\');" onMouseOut="return nd();">' . html($favorite['name']) . '</a>';
 			elseif (!$cfg['access_play'] && $cfg['access_stream'])	echo '<a href="stream.php?action=playlist&amp;favorite_id=' . $favorite['favorite_id'] . ($favorite['stream'] == false ? '&amp;stream_id=' . $cfg['stream_id'] : '') . '" onMouseOver="return overlib(\'Stream\');" onMouseOut="return nd();">' . html($favorite['name']) . '</a>';
 			else 													echo html($favorite['name']); ?></td>
+	
 	<td><?php echo bbcode($favorite['comment']); ?></td>
+	
 	<td><?php if ($cfg['access_admin']) echo '<a href="favorite.php?action=deleteFavorite&amp;favorite_id=' . $favorite['favorite_id'] . '&amp;sign=' . $cfg['sign'] . '" onClick="return confirm(\'Are you sure you want to delete favorite: ' . addslashes(html($favorite['name'])) . '?\');" onMouseOver="return overlib(\'Delete\');" onMouseOut="return nd();"><i class="fa fa-times-circle fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td><?php if ($cfg['access_admin']) echo '<a href="favorite.php?action=editFavorite&amp;favorite_id=' . $favorite['favorite_id'] . '" onMouseOver="return overlib(\'Edit\');" onMouseOut="return nd();"><i class="fa fa-pencil fa-fw icon-small"></i></a>'; ?></td>
+	
 	<td></td>
 </tr>
 <?php
 		$previous_stream = $favorite['stream'];
 	}
+	
+	require_once('include/play.inc.php');
+	$playlists = mpd('listplaylists');
+	sort($playlists, SORT_NATURAL);
+	
+	if (count($playlists) > 0 && $playlists !== 'ACK_ERROR_UNKNOWN') {
+?>
+		<tr class="header">
+			
+			<td class="icon"></td><!-- optional play -->
+			<td class="icon"></td><!-- optional add -->
+			<td class="icon"></td><!-- optional stream -->
+			<td>MPD's Playlists</td>
+			<td></td>
+			<td class="icon"></td><!-- optional delete -->
+			<td class="icon"></td>
+			<td class="space"></td>
+		</tr>
+
+		<?php	
+		for ($j = 0; $j < count($playlists); $j++) {
+			$plName = $playlists[$j];
+			//$plLastMod = $playlists['Last-Modified'][$j];
+		?>		
+			<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?> mouseover">
+				
+				<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=playMPDplaylist&amp;favorite_id=' . $plName . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Play\');" onMouseOut="return nd();"><i id="play_' . $plName . '" class="fa fa-play-circle-o fa-fw icon-small"></i></a>'; ?></td>
+				
+				<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=addMPDplaylist&amp;favorite_id=' . $plName . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Add to playlist\');" onMouseOut="return nd();"><i id="add_' . $plName . '" class="fa fa-plus-circle fa-fw icon-small"></i></a>'; ?></td>
+				
+				<td>
+				<!--
+				<?php if ($cfg['access_stream']) echo '<a href="stream.php?action=playlist&amp;favorite_id=' . $favorite['favorite_id'] . ($favorite['stream'] == false ? '&amp;stream_id=' . $cfg['stream_id'] : '') . '" onMouseOver="return overlib(\'Stream\');" onMouseOut="return nd();"><i class="fa fa-rss fa-fw icon-small"></i></a>'; ?>
+				-->
+				</td>
+				
+				<td><?php if ($cfg['access_play'])								echo '<a href="javascript:ajaxRequest(\'play.php?action=playMPDplaylist&amp;favorite_id=' . $plName . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Play\');" onMouseOut="return nd();">' . html($plName) . '</a>';
+						elseif (!$cfg['access_play'] && $cfg['access_stream'])	echo '<a href="stream.php?action=playlist&amp;favorite_id=' . $favorite['favorite_id'] . ($favorite['stream'] == false ? '&amp;stream_id=' . $cfg['stream_id'] : '') . '" onMouseOver="return overlib(\'Stream\');" onMouseOut="return nd();">' . html($favorite['name']) . '</a>';
+						else 													echo html($plName); ?>
+				</td>
+				
+				<td><?php //echo $plLastMod; ?></td>
+				
+				<td>
+				
+				<?php if ($cfg['access_admin']) echo '<a href="favorite.php?action=deleteFavoriteMPD&amp;favorite_id=' . $plName . '&amp;sign=' . $cfg['sign'] . '" onClick="return confirm(\'Are you sure you want to delete favorite: ' . addslashes(html($plName)) . '?\');" onMouseOver="return overlib(\'Delete\');" onMouseOut="return nd();"><i class="fa fa-times-circle fa-fw icon-small"></i></a>'; ?>
+				
+				</td>
+				
+				<td>
+				
+				<?php if ($cfg['access_admin']) echo '<a href="favorite.php?action=editFavoriteMPD&amp;favorite_id=' . $plName . '" onMouseOver="return overlib(\'Edit\');" onMouseOut="return nd();"><i class="fa fa-pencil fa-fw icon-small"></i></a>'; ?>
+				
+				</td>
+				
+				<td></td>
+			</tr>
+		<?php	
+		}
+	}
+	
+	
+	if ($cfg['use_tidal']) {
+		$t = new TidalAPI;
+		$t->username = $cfg["tidal_username"];
+		$t->password = $cfg["tidal_password"];
+		$t->token = $cfg["tidal_token"];
+		if (NJB_WINDOWS) $t->fixSSLcertificate();
+		$conn = $t->connect();
+		if ($conn === true){
+			$playlists = $t->getUserPlaylists();
+			if ($playlists['totalNumberOfItems'] > 0) {
+?>
+		<tr class="header">
+			
+			<td class="icon"></td><!-- optional play -->
+			<td class="icon"></td><!-- optional add -->
+			<td class="icon"></td><!-- optional stream -->
+			<td>Playlists from Tidal</td>
+			<td></td>
+			<td class="icon"></td><!-- optional delete -->
+			<td class="icon"></td>
+			<td class="space"></td>
+		</tr>
+
+		<?php
+				for ($j = 0; $j < $playlists['totalNumberOfItems']; $j++) {
+					$plName = $playlists['items'][$j]['title'];
+					$plId = $playlists['items'][$j]['uuid'];
+					//$plLastMod = $playlists['Last-Modified'][$j];
+				?>		
+					<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?> mouseover">
+						
+						<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=playTidalPlaylist&amp;favorite_id=' . $plId . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Play\');" onMouseOut="return nd();"><i id="play_' . $plId . '" class="fa fa-play-circle-o fa-fw icon-small"></i></a>'; ?></td>
+						
+						<td><?php if ($cfg['access_play']) echo '<a href="javascript:ajaxRequest(\'play.php?action=addTidalPlaylist&amp;favorite_id=' . $plId . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Add to playlist\');" onMouseOut="return nd();"><i id="add_' . $plId . '" class="fa fa-plus-circle fa-fw icon-small"></i></a>'; ?></td>
+						
+						<td>
+						</td>
+						
+						<td><?php if ($cfg['access_play'])	echo '<a href="javascript:ajaxRequest(\'play.php?action=playTidalPlaylist&amp;favorite_id=' . $plId . '&amp;menu=favorite\',evaluateAdd);" onMouseOver="return overlib(\'Play\');" onMouseOut="return nd();">' . html($plName) . '</a>';
+								else 													echo html($plName); ?>
+						</td>
+						
+						<td>
+							<?php echo $playlists['items'][$j]['description']; ?></td>
+						<td>
+						</td>
+						
+						<td>
+							<?php if ($cfg['access_admin']) echo '<a href="favorite.php?action=viewTidalPlaylist&amp;favorite_id=' . $plId . '&plName=' . $plName . '" onMouseOver="return overlib(\'See tracks\');" onMouseOut="return nd();"><i class="fa fa-list fa-fw icon-small"></i></a>'; ?>
+						</td>
+						
+						<td></td>
+					</tr>
+				<?php	
+				}
+			}
+		}
+	}
+	
+	
+	
 	echo '</table>' . "\n";
 	require_once('include/footer.inc.php');
 }
@@ -283,6 +425,242 @@ $(document).ready(function() {
 		type: "POST",  
 		data: { action : 'display',
 				favorite_id : <?php echo $favorite_id; ?>
+			  },  
+		dataType: "html"
+	}); 
+
+	request.done(function( data ) {  
+		$( "#favoriteList" ).html( data );
+		//calcTileSize();
+	}); 
+
+	request.fail(function( jqXHR, textStatus ) {  
+		alert( "Request failed: " + textStatus );	
+	}); 
+});
+
+function importPlaylist() {
+	document.favorite.action.value='importPlaylist'; 
+	$('#favorite').submit();
+}
+
+function addPlaylist() {
+	document.favorite.action.value='addPlaylist'; 
+	$('#favorite').submit();
+}
+
+function importPlaylistUrl() {
+	document.favorite.action.value='importPlaylistUrl'; 
+	$('#favorite').submit();
+}
+
+function addPlaylistUrl() {
+	document.favorite.action.value='addPlaylistUrl'; 
+	$('#favorite').submit();
+}
+
+//-->
+</script>
+
+<?php
+	require_once('include/footer.inc.php');
+}
+
+
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Edit favorite MPD                                                      |
+//  +------------------------------------------------------------------------+
+function editFavoriteMPD($favorite_id) {
+	global $cfg, $db;
+	authenticate('access_admin');
+	
+	require_once('include/play.inc.php');
+	
+	// formattedNavigator
+	$nav			= array();
+	$nav['name'][]	= 'Favorites';
+	$nav['url'][]	= 'favorite.php';
+	$nav['name'][]	= 'Edit';
+	require_once('include/header.inc.php');
+	
+		$disabled = ' disabled';
+	
+?>	
+<form action="favorite.php" method="post" name="favorite" id="favorite">
+	<input type="hidden" name="action" value="saveFavorite">
+	<input type="hidden" name="favorite_id" value="<?php echo $favorite_id; ?>">
+	<input type="hidden" name="sign" value="<?php echo $cfg['sign']; ?>">
+<table cellspacing="0" cellpadding="0" id="favoriteTable">
+<tr class="header">
+	<td colspan="3">&nbsp;Playlist info:</td>
+</tr>
+</tr>
+<tr class="textspace"><td colspan="3"></td></tr>
+<tr>
+<tr>
+	<td id="favoriteTableFirstCol">Name:</td>
+	<td class="textspace">&nbsp;</td>
+	<td class="fullscreen"><?php echo $favorite_id; ?></td>
+</tr>
+
+<tr class="space"><td colspan="3"></td></tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td>
+	<?php if ($disabled =='') {?>
+	<div class="buttons"><span><a href="#" onclick="$('#favorite').submit();">Save</a></span><span><a href="favorite.php">Cancel</a></span></div>
+	<?php } ?>
+	</td>
+</tr>
+
+<tr class="textspace"><td colspan="3"></td></tr>
+
+<tr class="header">
+	<td colspan="3">&nbsp;Tracks in this playlist:</td>
+</tr>		
+<tr class="line"><td colspan="9"></td></tr>
+<tr>
+	<td colspan="3">
+	<!-- begin indent -->
+<div id="favoriteList">
+<div style="text-align: center; padding: 1em;">
+ <i class="fa fa-cog fa-spin icon-small"></i> Loading track list...
+</div>
+ </div>
+	<!-- end indent -->
+	</td>
+</tr>
+</table>
+</form>
+
+<script type="text/javascript">
+<!--
+
+$(document).ready(function() {
+	var request = $.ajax({  
+		url: "ajax-favorite-arrange-MPD.php",  
+		type: "POST",  
+		data: { action : 'display',
+				favorite_id : '<?php echo $favorite_id; ?>'
+			  },  
+		dataType: "html"
+	}); 
+
+	request.done(function( data ) {  
+		$( "#favoriteList" ).html( data );
+		//calcTileSize();
+	}); 
+
+	request.fail(function( jqXHR, textStatus ) {  
+		alert( "Request failed: " + textStatus );	
+	}); 
+});
+
+function importPlaylist() {
+	document.favorite.action.value='importPlaylist'; 
+	$('#favorite').submit();
+}
+
+function addPlaylist() {
+	document.favorite.action.value='addPlaylist'; 
+	$('#favorite').submit();
+}
+
+function importPlaylistUrl() {
+	document.favorite.action.value='importPlaylistUrl'; 
+	$('#favorite').submit();
+}
+
+function addPlaylistUrl() {
+	document.favorite.action.value='addPlaylistUrl'; 
+	$('#favorite').submit();
+}
+
+//-->
+</script>
+
+<?php
+	require_once('include/footer.inc.php');
+}
+
+
+
+
+//  +------------------------------------------------------------------------+
+//  | View Tidal playlist                                                    |
+//  +------------------------------------------------------------------------+
+function viewTidalPlaylist($favorite_id, $favorite_name) {
+	global $cfg, $db;
+	authenticate('access_admin');
+	
+	require_once('include/play.inc.php');
+	
+	// formattedNavigator
+	$nav			= array();
+	$nav['name'][]	= 'Favorites';
+	$nav['url'][]	= 'favorite.php';
+	$nav['name'][]	= 'View';
+	require_once('include/header.inc.php');
+	
+?>	
+<form action="favorite.php" method="post" name="favorite" id="favorite">
+	<input type="hidden" name="action" value="saveFavorite">
+	<input type="hidden" name="favorite_id" value="<?php echo $favorite_id; ?>">
+	<input type="hidden" name="sign" value="<?php echo $cfg['sign']; ?>">
+<table cellspacing="0" cellpadding="0" id="favoriteTable">
+<tr class="header">
+	<td colspan="3">&nbsp;Playlist info:</td>
+</tr>
+</tr>
+<tr class="textspace"><td colspan="3"></td></tr>
+<tr>
+<tr>
+	<td id="favoriteTableFirstCol">Name:</td>
+	<td class="textspace">&nbsp;</td>
+	<td class="fullscreen"><?php echo $favorite_name; ?></td>
+</tr>
+
+<tr class="space"><td colspan="3"></td></tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td>
+	</td>
+</tr>
+
+<tr class="textspace"><td colspan="3"></td></tr>
+
+<tr class="header">
+	<td colspan="3">&nbsp;Tracks in this playlist:</td>
+</tr>		
+<tr class="line"><td colspan="9"></td></tr>
+<tr>
+	<td colspan="3">
+	<!-- begin indent -->
+<div id="favoriteList">
+<div style="text-align: center; padding: 1em;">
+ <i class="fa fa-cog fa-spin icon-small"></i> Loading track list...
+</div>
+ </div>
+	<!-- end indent -->
+	</td>
+</tr>
+</table>
+</form>
+
+<script type="text/javascript">
+<!--
+
+$(document).ready(function() {
+	var request = $.ajax({  
+		url: "ajax-favorite-arrange-Tidal.php",  
+		type: "POST",  
+		data: { action : 'display',
+				favorite_id : '<?php echo $favorite_id; ?>'
 			  },  
 		dataType: "html"
 	}); 
@@ -536,6 +914,26 @@ function importFavorite($favorite_id, $mode) {
 	}
 	
 	editFavorite($favorite_id);
+}
+
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Delete favorite MPD                                                    |
+//  +------------------------------------------------------------------------+
+function deleteFavoriteMPD($favorite_id) {
+	require_once('include/play.inc.php');
+	require_once('include/library.inc.php');
+	global $db, $cfg;
+	authenticate('access_admin', false, true, true);
+	$query1=mysqli_query($db,'SELECT player.player_name as pl, player_host, player_port, player_pass FROM player, session WHERE (sid = BINARY "' . cookie('netjukebox_sid') . '") and player.player_id=session.player_id');
+	$session1 = mysqli_fetch_assoc($query1);
+	$cfg['player_host'] = $session1['player_host'];
+	$cfg['player_port'] = $session1['player_port'];
+	$cfg['player_pass'] = $session1['player_pass'];
+	mpd('rm "' . $favorite_id . '"');
+	home();
 }
 
 

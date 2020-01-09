@@ -55,14 +55,26 @@ if (in_array($cfg['menu'], array('favorite', 'playlist', 'config')) == false)
 
 if (time() - hexdec($timestamp) > 2) {
 	$expired = bbcode($message);
-	$message = '<strong>Message has expired</strong><br><div id="show" style="display: block;"><a href="javascript:showHide(\'show\', \'hide\');"><img src="' . $cfg['img'] . 'small_show.png" alt="" class="small space">Message</a></div>';
-	$message .= '<div id="hide" style="display: none;"><a href="javascript:showHide(\'show\', \'hide\');"><img src="' . $cfg['img'] . 'small_hide.png" alt="" class="small space">Message</a><br>' . $expired . '</div>';
+	$message = '<strong>Message has expired</strong><br><div id="show" style="display: block;"><a href="javascript:showHide(\'show\', \'hide\');"><img src="' . $cfg['img'] . 'small_show.png" alt="" class="small">Message</a></div>';
+	$message .= '<div id="hide" style="display: none;"><a href="javascript:showHide(\'show\', \'hide\');"><img src="' . $cfg['img'] . 'small_hide.png" alt="" class="small">Message</a><br>' . $expired . '</div>';
 }
 else
 	$message = bbcode($message);
 
-require_once('include/header.inc.php');
-if ($cfg['debug']) { ?>
+
+if (strpos($message,"Failed to connect to MySQL server") !== false or strpos($message,"Failed to create database") !== false ) {
+	// formattedNavigator
+	$nav			= array();
+	$nav['name'][]	= 'Configuration';
+	$nav['url'][]	= 'config.php';
+	$nav['name'][]	= 'Settings';
+	require_once('include/header.inc.php');
+	echo '<div>' . $message . '<br>Check your settings (file <b>' . choose_config_file() . '</b>):</div><br/>';
+	require_once('include/settings.inc.php');
+}
+elseif ($cfg['debug']) { 
+	require_once('include/header.inc.php');
+	?>
 <table cellspacing="10" cellpadding="0" class="<?php echo $type; ?>">
 <tr>
 	<td rowspan="3" valign="top"><img src="<?php echo $cfg['img']; ?>medium_message_<?php echo $type; ?>.png" alt=""></td>
@@ -81,6 +93,7 @@ if ($cfg['debug']) { ?>
 <?php
 }
 else {
+	require_once('include/header.inc.php');
 ?>
 <table cellspacing="10" cellpadding="0" class="<?php echo $type; ?>">
 <tr>
@@ -90,5 +103,6 @@ else {
 </table>
 <?php
 }
+
 require_once('include/footer.inc.php');
 ?>

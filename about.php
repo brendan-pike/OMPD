@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -51,7 +51,7 @@ function versionCheck($ttl) {
 	global $cfg, $db;
 	
 	if ($cfg['latest_version_idle_time'] < time() - $ttl) {
-		if ($cfg['latest_version'] = @file_get_contents('http://www.ompd.pl/version.txt')) {
+		if ($cfg['latest_version'] = @file_get_contents('https://ompd.pl/version.txt')) {
 			$cfg['latest_version_idle_time'] = time();
 			mysqli_query($db,'UPDATE server SET value = "' . mysqli_real_escape_string($db,$cfg['latest_version']) . '" WHERE name = "latest_version"');
 			mysqli_query($db,'UPDATE server SET value = "' . (int) $cfg['latest_version_idle_time']  . '" WHERE name = "latest_version_idle_time"');
@@ -84,7 +84,7 @@ function about() {
 <tr class="header header_bigger">
 	<td class="space"></td>
 	<td colspan="3" style="white-space: normal;">
-	O!MPD&nbsp;<?php echo html(NJB_VERSION); ?>,&nbsp;Copyright&nbsp;&copy;&nbsp;2015-2017&nbsp;Artur&nbsp;Sier&#380;ant<br>
+	O!MPD&nbsp;<?php echo html(NJB_VERSION); ?>,&nbsp;Copyright&nbsp;&copy;&nbsp;2015-2019&nbsp;Artur&nbsp;Sier&#380;ant<br>
 	
 	</td>
 	<td class="space"></td>
@@ -94,7 +94,7 @@ function about() {
 <tr class="odd">
 	<td></td>
 	<td colspan="3">
-	<i class="fa fa-globe fa-fw"></i>&nbsp;&nbsp;<a href="http://www.ompd.pl">http://www.ompd.pl</a><br>
+	<i class="fa fa-globe fa-fw"></i>&nbsp;&nbsp;<a href="https://ompd.pl">https://ompd.pl</a><br>
 	<i class="fa fa-envelope-o fa-fw"></i>&nbsp;&nbsp;<a href="mailto:info@ompd.pl">info@ompd.pl</a><br><br>
 	This program comes with <a href="about.php?action=license#nowarranty">ABSOLUTELY NO WARRANTY</a>.<br>
 	This is free software, and you are welcome to redistribute it<br>
@@ -159,16 +159,71 @@ function about() {
 <tr class="line"><td colspan="5"></td></tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td>&nbsp;</td>
-	<td style="vertical-align: top;">v1.04 <br>201?.??.??</td>
+	<td style="vertical-align: top;">v1.06 <br>20??.??.??</td>
 	<td></td>
 	<td>
 	<ul style="padding-left: 1em;">
-	<li> added ability to play audio streams from Youtube movies (requires <a href="https://github.com/rg3/youtube-dl" target="_new">youtube-dl</a>)</li>
+	<li> added support for TIDAL direct play (play TIDAL with any version of MPD)</li>
+	<li> added support for TIDAL user playlists</li>
+	<li> added YouTube results in artist view and search (settable in config.inc.php)</li>
+	<li> added support for internet radio covers (settable in config.inc.php)</li>
+	<li> added default login option</li>
+	<li> added possibility to login using URL (login.php)</li>
+	<li> improved TIDAL support (python API replaced with PHP - works much faster)</li>
+	<li> fixed bugs</li>
 	</ul>
 	<br>
 	</td>
 	<td></td>
-</tr><tr class="line"><td colspan="5"></td></tr>
+</tr>
+<tr class="line"><td colspan="5"></td></tr>
+<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
+	<td>&nbsp;</td>
+	<td style="vertical-align: top;">v1.05 <br>2019.07.31</td>
+	<td></td>
+	<td>
+	<ul style="padding-left: 1em;">
+	<li> added support for TIDAL</li>
+	<li> added support for COMPOSER tag (settable in config.inc.php)</li>
+	<li> added 'Show favorite tracks' for selected genre</li>
+	<li> added popularity of artists (Library -> Popular -> Artist)</li>
+	<li> added info about Track Dynamic Range in track lists (settable in config.inc.php)</li>
+	<li> changed genre view</li>
+	<li> fixed bugs</li>
+	</ul>
+	<br>
+	</td>
+	<td></td>
+</tr>
+<tr class="line"><td colspan="5"></td></tr>
+<tr class="<?php echo ($i++ & 1) ? 
+'even' : 'odd'; ?>">
+	<td>&nbsp;</td>
+	<td style="vertical-align: top;">v1.04 <br>2018.07.24</td>
+	<td></td>
+	<td>
+	<ul style="padding-left: 1em;">
+	<li> added ability to play audio streams from YouTube movies (requires <a href="https://github.com/rg3/youtube-dl" target="_blank">youtube-dl</a>)</li>
+	<li> added new skins (skins are now based on <a href="http://lesscss.org/">{less}</a>)</li>
+	<li> added miniplayer (settable in config.inc.php)</li>
+	<li> added support for mpd playlists</li>
+	<li> added discography browser in album view (settable in config.inc.php)</li>
+	<li> added view for Album Dynamic Range (DR)</li>
+	<li> added direct navigation to selected page in paginator</li>
+	<li> added search action for album cover in album view (settable in config.inc.php)</li>
+	<li> added 'Play next' and 'Remove all below' to track menu in 'Now Playing'</li>
+	<li> added 'Go to album' in file browser (if album is in DB)</li>
+	<li> added config file editor</li>
+	<li> added consume mode on/off (long press on 'Delete played')</li>
+	<li> added stop function in 'Now Playing' (long press on play/pause button)</li>
+	<li> improved sorting by genre in search results</li>
+	<li> fixed bugs</li>
+	</ul>
+	<br>
+	</td>
+	<td></td>
+</tr>
+<tr class="line"><td colspan="5"></td></tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td>&nbsp;</td>
 	<td style="vertical-align: top;">v1.03 <br>2017.05.02</td>
@@ -180,7 +235,7 @@ function about() {
 	<li> added STYLE tag support</li>
 	<li> added file browser</li>
 	<li> added ability to update selected directory only (no need to do full update when adding single albums)</li>
-	<li> added ability to update album directly from Album view</li>
+	<li> added ability to update album directly from album view</li>
 	<li> added artist list in library</li>
 	<li> added sort by 'Add time' in search results</li>
 	<li> added display of multi-disc in album view</li>
@@ -195,6 +250,7 @@ function about() {
 	</td>
 	<td></td>
 </tr>
+<tr class="line"><td colspan="5"></td></tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td>&nbsp;</td>
 	<td style="vertical-align: top;">v1.02 <br>2016.09.19</td>
@@ -219,6 +275,7 @@ function about() {
 	</td>
 	<td></td>
 </tr>
+<tr class="line"><td colspan="5"></td></tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td>&nbsp;</td>
 	<td style="vertical-align: top;">v1.01 <br>2016.02.07</td>
@@ -244,6 +301,7 @@ function about() {
 	</td>
 	<td></td>
 </tr>
+<tr class="line"><td colspan="5"></td></tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>v1.0 <br>2015.07.10</td>
@@ -263,42 +321,42 @@ function about() {
 	<td></td>
 	<td>Google fonts</td>
 	<td></td>
-	<td><a href="http://www.google.com/fonts/" target="_new">http://www.google.com/fonts/</a></td>
+	<td><a href="http://www.google.com/fonts/" target="_blank">http://www.google.com/fonts/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>Font Awesome</td>
 	<td></td>
-	<td><a href="http://fontawesome.io/" target="_new">http://fontawesome.io/</a></td>
+	<td><a href="http://fontawesome.io/" target="_blank">http://fontawesome.io/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>Typicons</td>
 	<td></td>
-	<td><a href="http://typicons.com/" target="_new">http://typicons.com/</a></td>
+	<td><a href="http://typicons.com/" target="_blank">http://typicons.com/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>jQuery</td>
 	<td></td>
-	<td><a href="http://jquery.com/" target="_new">http://jquery.com/</a></td>
+	<td><a href="http://jquery.com/" target="_blank">http://jquery.com/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>spin.js</td>
 	<td></td>
-	<td><a href="http://fgnass.github.io/spin.js/" target="_new">http://fgnass.github.io/spin.js/</a></td>
+	<td><a href="http://fgnass.github.io/spin.js/" target="_blank">http://fgnass.github.io/spin.js/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>getID3() <?php $getID3 = new getID3; echo $getID3->version(); ?></td>
 	<td></td>
-	<td><a href="http://www.getid3.org" target="_new">http://www.getid3.org</a></td>
+	<td><a href="http://www.getid3.org" target="_blank">http://www.getid3.org</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
@@ -309,35 +367,63 @@ function about() {
 	//-->
 	</script></td>
 	<td></td>
-	<td><a href="http://www.bosrup.com/web/overlib/" target="_new">http://www.bosrup.com/web/overlib/</a></td>
+	<td><a href="http://www.bosrup.com/web/overlib/" target="_blank">http://www.bosrup.com/web/overlib/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>SHA-1</td>
 	<td></td>
-	<td><a href="http://www.pajhome.org.uk/crypt/md5/" target="_new">http://www.pajhome.org.uk/crypt/md5/</a></td>
+	<td><a href="http://www.pajhome.org.uk/crypt/md5/" target="_blank">http://www.pajhome.org.uk/crypt/md5/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>PHP Paginator Class</td>
 	<td></td>
-	<td><a href="https://gist.github.com/daslicht/c319e18a1c8761f360ad" target="_new">https://gist.github.com/daslicht</a></td>
+	<td><a href="https://gist.github.com/daslicht/c319e18a1c8761f360ad" target="_blank">https://gist.github.com/daslicht</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>TouchSwipe</td>
 	<td></td>
-	<td><a href="http://labs.rampinteractive.co.uk/touchSwipe/" target="_new">http://labs.rampinteractive.co.uk/touchSwipe/</a></td>
+	<td><a href="http://labs.rampinteractive.co.uk/touchSwipe/" target="_blank">http://labs.rampinteractive.co.uk/touchSwipe/</a></td>
 	<td></td>
 </tr>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
 	<td>Browser</td>
 	<td></td>
-	<td><a href="http://tomicki.net/" target="_new">http://tomicki.net/</a></td>
+	<td><a href="http://tomicki.net/" target="_blank">http://tomicki.net/</a></td>
+	<td></td>
+</tr>
+<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
+	<td></td>
+	<td>CodeMirror</td>
+	<td></td>
+	<td><a href="http://codemirror.net/" target="_blank">http://codemirror.net/</a></td>
+	<td></td>
+</tr>
+<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
+	<td></td>
+	<td>Longpress</td>
+	<td></td>
+	<td><a href="http://github.com/vaidik/jquery-longpress/" target="_blank">http://github.com/vaidik/jquery-longpress/</a></td>
+	<td></td>
+</tr>
+<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
+	<td></td>
+	<td>{less}</td>
+	<td></td>
+	<td><a href="http://lesscss.org/" target="_blank">http://lesscss.org/</a></td>
+	<td></td>
+</tr>
+<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
+	<td></td>
+	<td>PHP Simple HTML DOM Parser</td>
+	<td></td>
+	<td><a href="https://simplehtmldom.sourceforge.io/" target="_blank">https://simplehtmldom.sourceforge.io/</a></td>
 	<td></td>
 </tr>
 

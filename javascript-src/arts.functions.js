@@ -1,5 +1,5 @@
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015 Artur Sierzant                                 |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -32,6 +32,15 @@ function changeTileSizeInfo() {
 	else {
 		pos1 = this.href.indexOf('PHP=');
 		ts = this.href.substr(pos1 + 4, 3);
+		/* pos2 = this.href.indexOf('&', pos1);
+		if (pos2<0) {
+			ts = this.href.substr(pos1 + 4, this.href.length - pos1 + 4);
+		}
+		else {
+			ts = this.href.substr(pos1 + 4, pos2 - pos1);
+		} 
+		console.log ('ts: ' + ts);
+		*/
 		this.href = this.href.replace('?tileSizePHP=' + ts,'?tileSizePHP=' + $tileSizeArr[0]);
 	}
 	});
@@ -58,28 +67,31 @@ function changeTileSizeInfo() {
 }
 
 function calcTileSize() {
-    var $containerWidth = $(window).width();
+  var $containerWidth = $(window).width();
 	if ($containerWidth > 1280) $containerWidth = 1280;
 	
     if ($containerWidth <= 639) {
 		$tileCount=3;
-		$tileSize = Math.floor(($containerWidth/$tileCount) - 2);
+		$tileSize = Math.floor(($containerWidth/$tileCount) - 1);
+		//$tileSize = Math.floor((($containerWidth/$tileCount) - 1) * 10) / 10;
     	$('.tile_info').css('font-size', function() { return Math.floor($tileSize/12) + 'px'; });
 	}
 	
     if ($containerWidth > 639 && $containerWidth <= 1024) {
 		$tileCount=5;
-		$tileSize = Math.floor(($containerWidth/$tileCount) - 2);
+		$tileSize = Math.floor(($containerWidth/$tileCount) - 1);
+		//$tileSize = Math.floor((($containerWidth/$tileCount) - 1) * 10)/10;
         $('.tile_info').css('font-size', function() { return Math.floor($tileSize/12) + 'px'; });
 	}
 	
 	if ($containerWidth > 1024 && $containerWidth <=1280) {
 		$tileCount=7;
-		$tileSize = Math.floor(($containerWidth/$tileCount) - 2);
+		$tileSize = Math.floor((($containerWidth)/$tileCount) - 1);
+		//$tileSize = Math.floor((($containerWidth/$tileCount) - 1) * 10)/10;
     	$('.tile_info').css('font-size', function() { return Math.floor($tileSize/13) + 'px'; });
     	//$('.tile_info').css('font-size', function() { return '0.8em'; });
 	}
-	//console.log ($containerWidth);
+	//console.log ('tileSize: ' + $tileSize);
 	return [$tileSize,$containerWidth];
 }
 
@@ -135,11 +147,13 @@ function evaluatePlayTo(data) {
 
 function evaluateAdd(data) {
 	var timeOut = 2000;
+	albumId = data.album_id;
 	if (data.favorite_id) {data.album_id = data.favorite_id};
 	if (data.file_id) {data.album_id = data.file_id};
 	if (data.random) {data.album_id = 'random'};
 	if (data.disc) {data.album_id = data.album_id + '_' + data.disc};
-	if (data.album_id) { 
+	if (data.addType) {data.album_id = data.addType};
+	if (data.album_id && !data.track_id) { 
 		if (data.addResult == 'add_OK') {
 			$('[id="add_' + data.album_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-check-square icon-ok');
 			offMenuSub('');
@@ -156,7 +170,7 @@ function evaluateAdd(data) {
 			}, timeOut);
 			
 		}
-		else if (data.playResult == 'add_OK') {
+		else if (data.playResult == 'play_OK') {
 			$('[id="play_' + data.album_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-check-square icon-ok');
 			offMenuSub('');
 			
@@ -215,7 +229,7 @@ function evaluateAdd(data) {
 			
 		}
 		
-		else if (data.playResult == 'add_OK') {
+		else if (data.playResult == 'play_OK') {
 			$('[id="play_' + data.track_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-check-square icon-ok');
 			offMenuSub('');
 			
@@ -240,14 +254,6 @@ function evaluateAdd(data) {
 			  $('[id="insert_' + data.track_id +'"]').removeClass('fa-check-square icon-ok').addClass('fa-indent');
 			}, timeOut);
 		}
-		else if (data.insertPlayResult == 'insert_OK') {
-			$('[id="insertPlay_' + data.track_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-check-square icon-ok');
-			offMenuSub('');
-			
-			setTimeout(function(){
-			  $('[id="insertPlay_' + data.track_id +'"]').removeClass('fa-check-square icon-ok').addClass('fa-play-circle');
-			}, timeOut);
-		}
 		else if (data.insertResult == 'insert_error') {
 			$('[id="insert_' + data.track_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-exclamation-triangle icon-nok');
 			
@@ -256,8 +262,40 @@ function evaluateAdd(data) {
 			}, timeOut);
 			
 		}
+		else if (data.insertPlayResult == 'insert_OK') {
+			$('[id="insertPlay_' + data.track_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-check-square icon-ok');
+			$('[id="menu-icon' + data.position_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-check-square icon-ok');
+			offMenuSub('');
+			
+			setTimeout(function(){
+			  $('[id="insertPlay_' + data.track_id +'"]').removeClass('fa-check-square icon-ok').addClass('fa-play-circle');
+			  $('[id="menu-icon' + data.position_id +'"]').removeClass('fa-check-square icon-ok').addClass('fa-bars');
+			  
+			}, timeOut);
+		}
+		else if (data.insertPlayResult == 'insert_error') {
+			$('[id="insertPlay_' + data.track_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-exclamation-triangle icon-nok');
+			$('[id="menu-icon' + data.position_id +'"]').removeClass('fa-cog fa-spin icon-selected').addClass('fa-exclamation-triangle icon-nok');
+			
+			setTimeout(function(){
+			  $('[id="insertPlay_' + data.track_id +'"]').removeClass('fa-exclamation-triangle icon-nok').addClass('fa-play-circle');
+			  $('[id="menu-icon' + data.position_id +'"]').removeClass('fa-exclamation-triangle icon-nok').addClass('fa-bar');
+			}, timeOut);
+			
+		}
 	}
-	
+	if (albumId){
+	$.ajax({  
+			url: "play.php",  
+			type: "GET",  
+			data: { action : 'updateAddPlay',
+					album_id : albumId,
+					},  
+			dataType: "json"
+		}).done(function(data) {
+			updateAddPlay(data);
+		}); 
+	}
 };
 
 function playAlbum(albumId, md){
@@ -302,13 +340,40 @@ function resizeUsersTab($tileSize,$containerWidth) {
 	});
 }
 
+function resizeFormSettings(containerWidth, myCodeMirror) {
+		if (containerWidth > 1280) {containerWidth = 1280};
+		//winH = $(window).height() - $('#menu').height() - 200;
+		winH = window.innerHeight - $('#menu').height() - 200;
+		if (winH < 200) {winH = 180};
+		myCodeMirror.setSize(containerWidth, winH);
+}
+
 function resizeImgContainer() {
+	//winW = $(window).width();
+	var winW = window.innerWidth;
+	var winH = window.innerHeight;
+	var bodyMaxWidth = $('body').css('max-width');
+	var maxH;
+	var minW;
+	var imageH;
+	
+	miniplayerW = $("#miniplayer").width();
+	if (miniplayerW){
+		console.log("miniplayerW: " + miniplayerW);
+		if (miniplayerW > winW) miniplayerW = winW;
+		$("#file-info-mini").css("min-width",(miniplayerW - $("#image_container_mini").width() - $("#media_control_mini").width()));
+		$("#file-info-mini").css("max-width",(miniplayerW - $("#image_container_mini").width() - $("#media_control_mini").width()));
+		$("#media_control_mini").css("display","table-cell");
+	}
+	
 	//prevent resizing when virtual keybord is visible on mobile devices 
 	//if ($("#savePlaylistAsName").is(":focus") || $("#savePlaylistComment").is(":focus") || $("#addUrlAddress").is(":focus")) 
 	if ($("input").is(":focus")) 
 		return;
 		//$("#savePlaylistAsName").blur();
-		
+	
+	$("#discBrowser").hide();
+	
 	var showMenuSave = false;
 	var showMenuUrl = false;
 	var showMenuSearch = false;
@@ -326,84 +391,120 @@ function resizeImgContainer() {
 		$("#searchFormAll").hide();
 		showMenuSearch = true;
 	}
+		
+	if (winW > parseInt(bodyMaxWidth)) winW = bodyMaxWidth;
 	
-	//if ($("#searchFormAll").css('display')=='none') {
-		//window.scrollTo(0, 0);
-		var winH = $(window).height();
-		var winW = $(window).width();
-		var bodyMaxWidth = $('body').css('max-width');
-		var maxH;
-		var minW;
-		var imageH;
-			
-		if (winW > parseInt(bodyMaxWidth)) winW = bodyMaxWidth;
+	$('#image_container').css('width', '');
+	$('#image_container').css('height', '');
+	$('#image_container').css('max-height', '');
+	$('#image').css('max-width', '');
+	$('#image').css('height', '');
+	$('#image').css('max-height', '');
+	$('.pl-track-info-right').css('width', '');
+	$('.album-info-area-right').css('width', '');
+	
+	$('#image_in').css("top", "0");
+	
+	if (winW < 530) {
 		
-		$('#image_container').css('width', '');
-		$('#image_container').css('height', '');
-		$('#image_container').css('max-height', '');
-		$('#image').css('max-width', '');
-		$('#image').css('height', '');
-		$('#image').css('max-height', '');
-		$('.pl-track-info-right').css('width', '');
-		$('.album-info-area-right').css('width', '');
-		
-		$('#image_in').css("top", "0");
-		
-		if (winW < 530) {
-			$('#image').css('max-width', (winW));
-			maxH = $(window).height() - $('.pl-track-info-right').height() - $('#menu').height() - 3;
-			//maxH = $(window).height() - $('#menu').height() - 3;
-			//console.log ('maxH=' + maxH);
-			if ((winW - maxH) > 20) $('#image').css('width', maxH);
-			else $('#image').css('width', '');
-			$('#image').css('height', maxH);
-			$('#image').css('max-height', maxH);
-			$('#image_container').css('max-height', function(){return (winW) * 1.1;});
-			
-			/* imageH = $('#image').height();
-			if (imageH > maxH * 1.1) {
-				var imgTop = (imageH - maxH)/2;
-				//console.log ("maxH=" + maxH + " imageH=" + imageH);
-				$('#image_in').css("top", function() { return ("-" + (imageH - maxH)/2) + "px"});
-			} */
-			
-		} 
+		$('#image').css('max-width', (winW));
+		//maxH = $(window).height() - $('.pl-track-info-right').height() - $('#menu').height() - 3;
+		//use fixedMenuFill and menu_middle because they have defined height property in css file.
+		//maxH = $(window).height() - $('.pl-track-info-right').height() - $('#fixedMenuFill').height()- $('.menu_middle').height() - 3;
+		maxH = winH - $('.pl-track-info-right').height() - $('#fixedMenuFill').height()- $('.menu_middle').height() - 3;
+		//maxH = $(window).height() - $('#menu').height() - 3;
+		//console.log ('maxH=' + maxH);
+		maxH = Math.round(maxH);
+		if ((winW - maxH) > 20) {
+			$('#image').css('width', maxH);
+			//$('#image').css('height', '');
+		}
 		else {
 			$('#image').css('width', '');
-			minW = parseInt($('#image_container').css('min-width'));
-			maxHpx = (winH - $('.menu_top').height() - $('.menu_middle').height() - 5);
-			maxH = maxHpx/winW * 100;
-			maxH = Math.floor(maxH);
-			if (maxHpx<minW){
-				// $('#image_container').css('width', '');
-				// $('.pl-track-info-right').css('width', '');
-				// $('.album-info-area-right').css('width', '');
-			}
-			else if (maxH<50 || winW == bodyMaxWidth) {
-				$('#image_container').css('width', maxH  + "%");
-				$('.pl-track-info-right').css('width', (100 - maxH - 2) + "%");
-				$('.album-info-area-right').css('width', (100 - maxH - 3) + "%");
-			} 
-			else {
-				$('#image_container').css('width', '50%');
-				$('.pl-track-info-right').css('width', '48%');
-				$('.album-info-area-right').css('width', '47%');
-			}
-			$('#image').css('max-height', maxHpx);
-			$('#image').css('min-height', '220px');
-			
-			imageH = $('#image').height();
-			if (imageH > maxHpx * 1.1) {
-				var imgTop = (imageH - maxH)/2;
-				$('#image_in').css("top", function() { return ("-" + (imageH - maxHpx)/2) + "px"});
-			}
+			//$('#image').css('height', '');
+		}
+		//return;
+		$('#image').css('height', maxH);
+		$('#image').css('max-height', maxH);
+
+		
+		//$('#image_container').css('max-height', function(){return (winW) * 1.1;});
+		
+		/* imageH = $('#image').height();
+		if (imageH > maxH * 1.1) {
+			var imgTop = (imageH - maxH)/2;
+			//console.log ("maxH=" + maxH + " imageH=" + imageH);
+			$('#image_in').css("top", function() { return ("-" + (imageH - maxH)/2) + "px"});
+		} */
+		
+	} 
+	else {
+		$('#image').css('width', '');
+		minW = parseInt($('#image_container').css('min-width'));
+		maxHpx = (winH - $('.menu_top').height() - $('.menu_middle').height() - 5);
+		maxH = maxHpx/winW * 100;
+		maxH = Math.floor(maxH);
+		if (maxHpx<minW){
+			// $('#image_container').css('width', '');
+			// $('.pl-track-info-right').css('width', '');
+			// $('.album-info-area-right').css('width', '');
+		}
+		else if (maxH<50 || winW == bodyMaxWidth) {
+			$('#image_container').css('width', maxH  + "%");
+			$('.pl-track-info-right').css('width', (100 - maxH - 2) + "%");
+			$('.album-info-area-right').css('width', (100 - maxH - 3) + "%");
 		} 
-	//}
+		else {
+			$('#image_container').css('width', '50%');
+			$('.pl-track-info-right').css('width', '48%');
+			$('.album-info-area-right').css('width', '47%');
+		}
+		$('#image').css('max-height', maxHpx);
+		$('#image').css('min-height', '220px');
+		
+		imageH = $('#image').height();
+		if (imageH > maxHpx * 1.1) {
+			var imgTop = (imageH - maxH)/2;
+			$('#image_in').css("top", function() { return ("-" + (imageH - maxHpx)/2) + "px"});
+		}
+	} 
+	
 	if (showMenuSave == true) $("#menuSubMiddleMediaSavePlaylist").show();
 	if (showMenuUrl == true) $("#menuSubMiddleMediaAddUrl").show();
 	if (showMenuSearch == true) $("#searchFormAll").show();
-		
+	
+	if (typeof thumbID !== 'undefined') {
+		$('[id^=thumb]').css('pointer-events','none');
+		$("#discBrowser").css("max-width",$("#image_container").width());
+		$("#discBrowser").css("width",$("#image_container").width());
+		$("#discBrowser").show();
+			
+		//scroll discography browser to active album		
+		// '+3' is for right margin of thumb 
+		$("#discBrowser").animate({scrollLeft: (($(thumbID).width() + 3)  * thumbIDCount - $("#discBrowser").width()/2 + $(thumbID).width()/2) }, 500);
+			
+		setTimeout(function() {
+				$('[id^=thumb]').css('pointer-events','all');
+			}, 1000);
+	}
+	
+	/* miniplayerW = $("#miniplayer").width();
+	if (miniplayerW > winW) miniplayerW = winW;
+	$("#file-info-mini").css("min-width",(miniplayerW - $("#image_container_mini").width() - $("#media_control_mini").width()));
+	$("#file-info-mini").css("max-width",(miniplayerW - $("#image_container_mini").width() - $("#media_control_mini").width()));
+	
+	$("#media_control_mini").css("display","table-cell"); */
+	
+	if ($(window).width() > 1280) {
+		$(".back-to-top").css("right",($(window).width() - 1280)/2);
+	}
+	else {
+		$(".back-to-top").css("right",10)
+	}
+	
+	
 } 
+
 
 
 function toggleMenuSub(id) {
@@ -467,17 +568,38 @@ function toggleStarSub(id, track_id) {
 function scrollToShow(el) {
 	var elOffset = el.offset().top;
 	var elHeight = el.height();
-	var windowHeight = $(window).height();
+	//var windowHeight = $(window).height();
+	var windowHeight = window.innerHeight;
+	var windowScrollTop = $(window).scrollTop();
 	var offset;
-	
+	var toTopMB = $(".back-to-top").css("margin-bottom");
+	var toTopB = $(".back-to-top").css("bottom");
+	var toTopMB = parseInt(toTopMB.replace("px",""));
+	var toTopB = parseInt(toTopB.replace("px",""));
+	console.log (toTopB + toTopMB);
+	console.log ("elOffset: " + elOffset);
+	console.log ("windowScrollTop: " + windowScrollTop);
+	console.log ("elHeight: " + elHeight);
+	console.log ("windowHeight: " + windowHeight);
 	if (elHeight < windowHeight) {
-		offset = elOffset - ((windowHeight - elHeight)) + 100;
-		if (elHeight > (windowHeight / 2)) {
-			offset = elOffset - ((windowHeight - elHeight));
+		if ((elOffset - 130)  < windowScrollTop) {
+			console.log("0");
+			offset = elOffset - 130;
+		}
+		else {
+			offset = elOffset - ((windowHeight - elHeight)) + toTopB + toTopMB + $(".back-to-top").height() + 12;
+			console.log("1");
+			if (elHeight > (windowHeight / 2)) {
+				console.log("2");
+				//offset = elOffset - ((windowHeight - elHeight));
+				offset = elOffset - 130;
+			}
 		}	
 	}
 	else {
-		offset = elOffset;
+		console.log("3");
+		console.log(el);
+		offset = elOffset - 130;
 	}
 	var speed = 200;
 	$('html, body').animate({scrollTop:offset}, speed);
@@ -495,6 +617,11 @@ $.fn.is_on_screen = function(){
     var bounds = this.offset();
     bounds.right = bounds.left + this.outerWidth();
     bounds.bottom = bounds.top + this.outerHeight() + 130;
+	bounds.top = bounds.top - 110;
+	console.log("viewport.top: " + viewport.top);
+	console.log("viewport.bottom: " + viewport.bottom);
+	console.log("bounds.top: " + bounds.top);
+	console.log("bounds.bottom: " + bounds.bottom);
  
     return (!(viewport.right < bounds.left || viewport.left > bounds.right || viewport.bottom < bounds.bottom || viewport.top > bounds.top));
 };
@@ -520,9 +647,11 @@ function toggleSubMiddle(id,showTrackOptions) {
 	if ($( '#menuSubMiddleMedia' + id ).css("display")=="none"){
 		if(showTrackOptions) {
 			showSaveCurrentTrack();
+			//getFavoritesList(current_track_id);
 		}
 		else {
 			hideSaveCurrentTrack();
+			//getFavoritesList();
 		}
 		$( '#menuSubMiddleMedia' + id ).slideDown( "slow", function() {});
 		$( '#iconmenuSubMiddleMedia' + id ).addClass("icon-selected");
@@ -572,18 +701,18 @@ function toggleSearchResults($id) {
 };
 
 function toggleSearch() {
-	$('#iconPlayerToggler').removeClass("icon-selected");
-	$('#iconVolumeToggler').removeClass("icon-selected");
+	$('#iconPlayerToggler').removeClass("icon-selected-main-menu");
+	$('#iconVolumeToggler').removeClass("icon-selected-main-menu");
 	$('#playerList').slideUp( "slow", function() {});
 	$('#volumeArea').slideUp( "slow", function() { });
 	if ($('#searchFormAll').css("display")=="none"){
 		$('#searchFormAll').slideDown( "slow", function() {});
-		$('#iconSearchToggler').addClass("icon-selected");
+		$('#iconSearchToggler').addClass("icon-selected-main-menu");
 		$('#search_string').focus();
 	}
 	else {
 		$('#searchFormAll').slideUp( "slow", function() { });
-		$('#iconSearchToggler').removeClass("icon-selected");
+		$('#iconSearchToggler').removeClass("icon-selected-main-menu");
 		$('#iconSearchToggler').focus();
 		}
 };
@@ -594,33 +723,33 @@ function goSearch () {
 
 function toggleChangePlayer() {
 	ajaxRequest('ajax-evaluate-status.php', evaluateVolume);
-	$('#iconSearchToggler').removeClass("icon-selected");
-	$('#iconVolumeToggler').removeClass("icon-selected");
+	$('#iconSearchToggler').removeClass("icon-selected-main-menu");
+	$('#iconVolumeToggler').removeClass("icon-selected-main-menu");
 	$('#searchFormAll').slideUp( "slow", function() {});
 	$('#volumeArea').slideUp( "slow", function() { });
 	if ($('#playerList').css("display")=="none"){
 		$('#playerList').slideDown( "slow", function() {});
-		$('#iconPlayerToggler').addClass("icon-selected");
+		$('#iconPlayerToggler').addClass("icon-selected-main-menu");
 	}
 	else {
 		$('#playerList').slideUp( "slow", function() { });
-		$('#iconPlayerToggler').removeClass("icon-selected");
+		$('#iconPlayerToggler').removeClass("icon-selected-main-menu");
 		}
 };
 
 function toggleVolume() {
 	ajaxRequest('ajax-evaluate-status.php', evaluateVolume);
-	$('#iconSearchToggler').removeClass("icon-selected");
-	$('#iconPlayerToggler').removeClass("icon-selected");
+	$('#iconSearchToggler').removeClass("icon-selected-main-menu");
+	$('#iconPlayerToggler').removeClass("icon-selected-main-menu");
 	$('#searchFormAll').slideUp( "slow", function() {});
 	$('#playerList').slideUp( "slow", function() {});
 	if ($('#volumeArea').css("display")=="none"){
 		$('#volumeArea').slideDown( "slow", function() {});
-		$('#iconVolumeToggler').addClass("icon-selected");
+		$('#iconVolumeToggler').addClass("icon-selected-main-menu");
 	}
 	else {
 		$('#volumeArea').slideUp( "slow", function() { });
-		$('#iconVolumeToggler').removeClass("icon-selected");
+		$('#iconVolumeToggler').removeClass("icon-selected-main-menu");
 		}
 };
 
@@ -640,6 +769,13 @@ function togglePlayedHistory() {
 
 
 
+function showSpinnerImg(targetImg, spinnerImg) {
+	targetImg.style.width = $("#image_container").width() + 'px';
+	targetImg.style.height = $("#image_container").width() + 'px';
+	spinnerImg.spin(targetImg);
+};
+
+
 function showSpinner() {
 	target.style.width = $( window ).width();
 	target.style.height = $( window ).height();
@@ -652,7 +788,6 @@ function showSpinner() {
 function hideSpinner() {
 	spinner.stop();
 	target.style.display = "none";
-	
 };
 
 
@@ -683,23 +818,30 @@ function toggleInsert(state,i) {
 
 function moveTrack(toPosition,i,isMoveToTop){
 	if (i >= 0) fromPosition = i;
-	if (fromPosition - toPosition == 1) toggleInsert('off',toPosition+1);
-	else toggleInsert('off');
-	console.log('fromPosition: ' + fromPosition + ' toPosition: ' + toPosition);
-	if (fromPosition != toPosition) {
-		if (isMoveToTop) { //move to top
-			$('#track' + fromPosition).insertBefore('#track' + toPosition);
-			$('#track-line' + fromPosition).insertAfter('#track' + fromPosition);
-			$('#track-menu' + fromPosition).insertAfter('#track-line' + fromPosition);
-			showSpinner();
-			ajaxRequest('play.php?action=moveTrack&fromPosition=' + fromPosition + '&toPosition=' + toPosition + '&isMoveToTop=' + isMoveToTop + '&menu=playlist',evaluateListpos);
-		}
-		else if (fromPosition - toPosition != 1){
-			$('#track' + fromPosition).insertAfter('#track-menu' + toPosition);
-			$('#track-line' + fromPosition).insertAfter('#track' + fromPosition);
-			$('#track-menu' + fromPosition).insertAfter('#track-line' + fromPosition);
-			showSpinner();
-			ajaxRequest('play.php?action=moveTrack&fromPosition=' + fromPosition + '&toPosition=' + toPosition + '&isMoveToTop=' + isMoveToTop + '&menu=playlist',evaluateListpos);
+	
+	if (toPosition == 'playNext') {
+		showSpinner();
+		ajaxRequest('play.php?action=moveTrack&fromPosition=' + fromPosition + '&toPosition=' + toPosition + '&isMoveToTop=' + isMoveToTop + '&menu=playlist',evaluateListpos);
+	}
+	else {	
+		if (fromPosition - toPosition == 1) toggleInsert('off',toPosition+1);
+		else toggleInsert('off');
+		console.log('fromPosition: ' + fromPosition + ' toPosition: ' + toPosition);
+		if (fromPosition != toPosition) {
+			if (isMoveToTop) { //move to top
+				/* $('#track' + fromPosition).insertBefore('#track' + toPosition);
+				$('#track-line' + fromPosition).insertAfter('#track' + fromPosition);
+				$('#track-menu' + fromPosition).insertAfter('#track-line' + fromPosition); */
+				showSpinner();
+				ajaxRequest('play.php?action=moveTrack&fromPosition=' + fromPosition + '&toPosition=' + toPosition + '&isMoveToTop=' + isMoveToTop + '&menu=playlist',evaluateListpos);
+			}
+			else if (fromPosition - toPosition != 1){
+				/* $('#track' + fromPosition).insertAfter('#track-menu' + toPosition);
+				$('#track-line' + fromPosition).insertAfter('#track' + fromPosition);
+				$('#track-menu' + fromPosition).insertAfter('#track-line' + fromPosition); */
+				showSpinner();
+				ajaxRequest('play.php?action=moveTrack&fromPosition=' + fromPosition + '&toPosition=' + toPosition + '&isMoveToTop=' + isMoveToTop + '&menu=playlist',evaluateListpos);
+			}
 		}
 	}
 }
@@ -739,6 +881,49 @@ function arrangeFavItem(toPosition,i,isMoveToTop,favorite_id){
 		var size = $tileSize;
 		var request = $.ajax({  
 			url: "ajax-favorite-arrange.php",  
+			type: "POST",  
+			data: { action : action,
+					favorite_id : favorite_id,
+					toPosition: toPosition,
+					fromPosition: fromPosition,
+					isMoveToTop: isMoveToTop},  
+			dataType: "html"
+		}); 
+		
+		request.done(function( data ) {  
+			$( "#favoriteList" ).html( data );
+			//calcTileSize();
+			//hideSpinner();
+		}); 
+		
+		request.fail(function( jqXHR, textStatus ) {  
+			alert( "Request failed: " + textStatus );	
+		}); 
+	}
+};
+
+
+function arrangeFavItemMPD(toPosition,i,isMoveToTop,favorite_id){
+	if (i >= 0) fromPosition = i;
+	
+	
+	if (toPosition < 0) removeItem = true 
+	else removeItem = false;
+	
+	toggleInsert('off');
+	console.log('fromPosition: ' + fromPosition + ' toPosition: ' + toPosition);
+	if (fromPosition != toPosition) {
+		if (removeItem) {
+			action = 'removeItem';
+			//console.log ('remove ' + i);
+		}
+		else {
+			action = 'moveItem';
+		}
+		
+		var size = $tileSize;
+		var request = $.ajax({  
+			url: "ajax-favorite-arrange-MPD.php",  
 			type: "POST",  
 			data: { action : action,
 					favorite_id : favorite_id,
@@ -827,6 +1012,7 @@ function playlistSave(action, id, saveTrackId, host, port) {
 						}
 						break;
 				}
+				//getFavoritesList(saveTrackId);
 	});
 };
 
@@ -853,12 +1039,16 @@ function setFavorite(data) {
 function setBlacklist(data) {
 	if (data.action == "add") {
 		$("#blacklist-star-bg" + data.track_id).addClass("blackstar-selected blackstar");
+		$("#blacklist-star-bg" + data.track_id + "_fav").addClass("blackstar-selected blackstar");
 		$("#blacklist-star-bg-sub" + data.track_id).addClass("blackstar-selected");
+		$("#blacklist-star-bg-sub" + data.track_id + "_fav").addClass("blackstar-selected");
 		$("#addToBlacklist_txt-" + data.track_id).text("Remove from ");
 	}
 	else if (data.action == "remove") {
 		$("#blacklist-star-bg" + data.track_id).removeClass("blackstar-selected blackstar");
+		$("#blacklist-star-bg" + data.track_id + "_fav").removeClass("blackstar-selected blackstar");
 		$("#blacklist-star-bg-sub" + data.track_id).removeClass("blackstar-selected");
+		$("#blacklist-star-bg-sub" + data.track_id + "_fav").removeClass("blackstar-selected");
 		$("#addToBlacklist_txt-" + data.track_id).text("Add to ");
 	}
 	
@@ -952,3 +1142,46 @@ function doPlayAction(action, filepath, track_id, playAfterInsert, doFunction) {
 			}	
 		});
 };
+
+
+function setAnchorClick() {
+	$('a').click(function(){
+		if (this.hasAttribute('id')) {
+			if ($(this).attr('id').indexOf("a_play_track") > -1) {
+				var id = $(this).attr('id').replace("a_play_track","");
+			}
+			if ($(this).attr('id').indexOf("a_album") > -1) {
+				var id = $(this).attr('id').replace("a_album","");
+			}
+			$("#menu-icon" + id).removeClass('fa-bars').addClass('fa-cog fa-spin icon-selected');
+		}
+		$(this).find('> i[id^="play_"]').removeClass('fa-play-circle-o').addClass('fa-cog fa-spin icon-selected');
+		$(this).find('> i[id^="add_"]').removeClass('fa-plus-circle').addClass('fa-cog fa-spin icon-selected');
+		$(this).find('> i[id^="insertPlay_"]').removeClass('fa-play-circle').addClass('fa-cog fa-spin icon-selected');
+		$(this).find('> i[id^="insert_"]').removeClass('fa-indent').addClass('fa-cog fa-spin icon-selected');
+		$(this).find('> i[id^="playTo_"]').removeClass('fa-share-square-o').addClass('fa-cog fa-spin icon-selected');
+		$(this).find('> i[id^="randomPlay"]').removeClass('fa-random').addClass('fa-cog fa-spin icon-selected');
+		
+	})
+};
+
+function getFavoritesList(track_id){
+	var request = $.ajax({  
+	url: "ajax-favorite-list.php",  
+	type: "GET",  
+	data: { 
+		file : 'true',
+		track_id : track_id
+	},  
+	dataType: "html"
+	}); 
+
+	request.done(function(data) {  
+	$("#savePlaylistAddTo").html(data);
+	}); 
+};
+
+//escapeRegExp() from https://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+function escapeRegExp(string) {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}

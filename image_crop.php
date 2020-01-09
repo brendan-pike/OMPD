@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -19,7 +19,7 @@
 //  +------------------------------------------------------------------------+
 
 
-$thumbnail = $_GET['thumbnail'];
+$thumbnail = str_replace('https://','http://',$_GET['thumbnail']);
 
 $img = imagecreatefromjpeg($thumbnail);
 if ($img) {

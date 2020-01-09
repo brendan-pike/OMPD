@@ -1,7 +1,7 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant	                         |
-//  | http://www.ompd.pl                                             		 |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
+//  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
 //  | netjukebox, Copyright © 2001-2012 Willem Bartels                       |
@@ -64,6 +64,7 @@ elseif 	($action == 'cacheDeleteProfile')		{cacheDeleteProfile();			batchTransco
 
 elseif	($action == 'externalStorage')			externalStorage();
 elseif	($action == 'deleteExternalStorage')	{deleteExternalStorage();		externalStorage();}
+elseif	($action == 'editSettings')			editSettings();
 
 else	message(__FILE__, __LINE__, 'error', '[b]Unsupported input value for[/b][br]action');
 
@@ -93,7 +94,7 @@ function config() {
 <tr class="header">
 	<td class="space"></td>
 	<td>Session profile</td>
-	<td class="textspace"></td>
+	<td class="space"></td>
 	<td>Comment</td>
 	<td class="space"></td>
 </tr>
@@ -102,7 +103,7 @@ function config() {
 	if ($cfg['access_playlist'] || $cfg['access_play'] || $cfg['access_add'] || $cfg['access_admin']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="config.php?action=playerProfile"><i class="fa fa-music fa-fw icon-small"></i>Player&nbsp;profile</a></td>
+	<td class="nowrap"><a href="config.php?action=playerProfile"><i class="fa fa-music fa-fw icon-small"></i>Player&nbsp;profile</a></td>
 	<td></td>
 	<td><?php echo html($cfg['player_name']); ?></td>
 	<td></td>
@@ -112,7 +113,7 @@ function config() {
 	if ($cfg['access_stream'] || $cfg['access_admin']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="config.php?action=streamProfile"><i class="fa fa-rss fa-fw icon-small"></i>Stream&nbsp;profile</a></td>
+	<td class="nowrap"><a href="config.php?action=streamProfile"><i class="fa fa-rss fa-fw icon-small"></i>Stream&nbsp;profile</a></td>
 	<td></td>
 	<td><?php echo html($stream); ?></td>
 	<td></td>
@@ -122,7 +123,7 @@ function config() {
 	if ($cfg['access_download'] || $cfg['access_admin']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="config.php?action=downloadProfile"><i class="fa fa-download fa-fw icon-small"></i>Download&nbsp;profile</a></td>
+	<td class="nowrap"><a href="config.php?action=downloadProfile"><i class="fa fa-download fa-fw icon-small"></i>Download&nbsp;profile</a></td>
 	<td></td>
 	<td><?php echo html($download); ?></td>
 	<td></td>
@@ -132,7 +133,7 @@ function config() {
 ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="config.php?action=skinProfile"><i class="fa fa-eye fa-fw icon-small"></i>Skin&nbsp;profile</a></td>
+	<td class="nowrap"><a href="config.php?action=skinProfile"><i class="fa fa-eye fa-fw icon-small"></i>Skin&nbsp;profile</a></td>
 	<td></td>
 	<td><?php echo html($cfg['skin']); ?></td>
 	<td></td>
@@ -141,7 +142,7 @@ function config() {
 <tr class="header">
 	<td class="space"></td>
 	<td>Configuration</td>
-	<td class="textspace"></td>
+	<td class="space"></td>
 	<td>Comment</td>
 	<td class="space"></td>
 </tr>
@@ -151,7 +152,7 @@ function config() {
 	if ($cfg['access_admin'] == false) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="users.php?action=accessRight"><i class="fa fa-user fa-fw icon-small"></i>Access&nbsp;right</a></td>
+	<td class="nowrap"><a href="users.php?action=accessRight"><i class="fa fa-user fa-fw icon-small"></i>Access&nbsp;right</a></td>
 	<td></td>
 	<td><?php echo html($cfg['username']); ?></td>
 	<td></td>
@@ -161,7 +162,17 @@ function config() {
 	if ($cfg['access_admin']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="users.php"><i class="fa fa-users fa-fw icon-small"></i>Users</a></td>
+	<td class="nowrap"><a href="config.php?action=editSettings"><i class="fa fa-cogs fa-fw icon-small"></i>Settings</a></td>
+	<td></td>
+	<td>Edit configuration file (<?php echo choose_config_file(); ?>)</td>
+	<td></td>
+</tr>
+<?php
+	}
+	if ($cfg['access_admin']) { ?>
+<tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
+	<td></td>
+	<td class="nowrap"><a href="users.php"><i class="fa fa-users fa-fw icon-small"></i>Users</a></td>
 	<td></td>
 	<td>Users access rights</td>
 	<td></td>
@@ -171,7 +182,7 @@ function config() {
 	if ($cfg['access_admin']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="users.php?action=online">
+	<td class="nowrap"><a href="users.php?action=online">
   <i class="fa fa-bolt fa-fw icon-small"></i>Online</a></td>
 	<td></td>
 	<td>Online in the last 24 hours</td>
@@ -182,7 +193,7 @@ function config() {
 	if ($cfg['access_admin']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="users.php?action=userStatistics&amp;period=overall"><i class="fa fa-bar-chart fa-fw icon-small"></i>User statistics</a></td>
+	<td class="nowrap"><a href="users.php?action=userStatistics&amp;period=overall"><i class="fa fa-bar-chart fa-fw icon-small"></i>User&nbsp;statistics</a></td>
 	<td></td>
 	<td>Show user statistics</td>
 	<td></td>
@@ -192,7 +203,7 @@ function config() {
 	if ($cfg['access_statistics']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="statistics.php" onclick="showSpinner();"><i class="fa fa-line-chart fa-fw icon-small"></i>Media&nbsp;statistics</a></td>
+	<td class="nowrap"><a href="statistics.php" onclick="showSpinner();"><i class="fa fa-line-chart fa-fw icon-small"></i>Media&nbsp;statistics</a></td>
 	<td></td>
 	<td>Show media statistics</td>
 	<td></td>
@@ -211,11 +222,28 @@ function config() {
 <?php
 	}
 */
-	if ($update == 'cancel') 
-		mysqli_query($db, "UPDATE update_progress 
-		SET update_status = 0,
-		last_update = 'canceled',
-		update_time = '" . date('Y-m-d, H:i') . "'");
+	if ($update == 'cancel') {
+		$result = mysqli_query($db, "SELECT * FROM update_progress");
+		$row=mysqli_fetch_assoc($result);
+		if ($row["update_status"] == 1 && mysqli_num_rows($result)>0) {
+			mysqli_query($db, "UPDATE update_progress 
+			SET update_status = 0,
+			last_update = 'canceled',
+			update_time = '" . date('Y-m-d, H:i') . "'");
+			mysqli_query($db, "UPDATE album 
+				SET updated = 1
+				WHERE 1");
+			mysqli_query($db, "UPDATE album_id 
+				SET updated = 1
+				WHERE 1");
+			mysqli_query($db, "UPDATE bitmap 
+				SET updated = 1
+				WHERE 1");
+			mysqli_query($db, "UPDATE track 
+				SET updated = 1
+				WHERE 1");
+		}
+	}
 	if ($cfg['access_admin']) { 
 		$update_info = '';
 		$result = mysqli_query($db, "SELECT * FROM update_progress");
@@ -301,7 +329,7 @@ function config() {
 	if ($cfg['access_admin'] && $cfg['php_info']) { ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?>">
 	<td></td>
-	<td><a href="phpinfo.php"><i class="fa fa-info-circle fa-fw icon-small"></i>PHP information</a></td>
+	<td class="nowrap"><a href="phpinfo.php"><i class="fa fa-info-circle fa-fw icon-small"></i>PHP&nbsp;information</a></td>
 	<td></td>
 	<td>Enabled in the configuration file</td>
 	<td></td>
@@ -409,18 +437,18 @@ function editPlayerProfile() {
 		
 		$txt_menu = 'Edit profile';
 		$query = mysqli_query($db, 'SELECT player_name, player_type, player_host, player_port, player_pass, media_share FROM player WHERE player_id = ' . (int) $player_id);
-		$player = mysqli_fetch_assoc($query);
+		$player2 = mysqli_fetch_assoc($query);
 		
-		if ($player == false)
+		if ($player2 == false)
 			message(__FILE__, __LINE__, 'error', '[b]Error[/b][br]player_id not found in database');
 		
 		$txt_menu			= 'Edit profile';
-		$cfg['player_name']	= $player['player_name'];
+		/* $cfg['player_name']	= $player['player_name'];
 		$cfg['player_type']	= $player['player_type'];
 		$cfg['player_host']	= $player['player_host'];
 		$cfg['player_port']	= $player['player_port'];
 		$cfg['player_pass']	= $player['player_pass'];
-		$cfg['media_share']	= $player['media_share'];
+		$cfg['media_share']	= $player['media_share']; */
 	}
 	
 	// formattedNavigator
@@ -440,7 +468,7 @@ function editPlayerProfile() {
 <tr>
 	<td>Name:</td>
 	<td class="textspace"></td>
-	<td><input type="text" name="name" value="<?php echo html($cfg['player_name']); ?>" maxlength="255" class="edit"></td>
+	<td><input type="text" name="name" value="<?php echo html($player2['player_name']); ?>" maxlength="255" class="edit"></td>
 </tr>
 
 <tr class="textspace"><td colspan="3"></td></tr>
@@ -448,7 +476,7 @@ function editPlayerProfile() {
 <tr>
 	<td>Player:</td>
 	<td></td>
-	<td><input type="radio" name="player_type" value="2" <?php if ($cfg['player_type'] == NJB_MPD) echo 'checked '; ?>class="space" onClick="mpdDefault()"> Only! Music Player Daemon</td>
+	<td><input type="radio" name="player_type" value="2" checked class="space" onClick="mpdDefault()"> Only! Music Player Daemon</td>
 </tr>
 <tr class="textspace"><td colspan="3"></td></tr>
 
@@ -468,12 +496,12 @@ function editPlayerProfile() {
 <tr>
 	<td>Player host:</td>
 	<td></td>
-	<td><input type="text" name="player_host" value="<?php echo html($cfg['player_host']); ?>" maxlength="255" class="edit"></td>
+	<td><input type="text" name="player_host" value="<?php echo html($player2['player_host']); ?>" maxlength="255" class="edit"></td>
 </tr>
 <tr>
 	<td>Player port:</td>
 	<td></td>
-	<td><input type="text" name="player_port" value="<?php echo $cfg['player_port']; ?>" maxlength="5" class="edit"></td>
+	<td><input type="text" name="player_port" value="<?php echo ($player_id == 0 ?  '6600' : $player2['player_port']); ?>" maxlength="5" class="edit"></td>
 </tr>
 <tr class="textspace"><td colspan="3"></td></tr>
 
@@ -497,15 +525,20 @@ function editPlayerProfile() {
 	$temp = explode('/', $cfg['media_dir']);
 ?>
 <script type="text/javascript">
+<?php
+	if (get('player_id') == '0') {
+		echo('mpdDefault();');
+	}
+?>
 <!--
 function initialize() {
 	document.config.name.focus();
 <?php
 	if ($cfg['player_type'] == NJB_MPD) {
-		echo "\tdocument.config.player_pass.className = 'edit readonly';\n";
+		/* echo "\tdocument.config.player_pass.className = 'edit readonly';\n";
 		echo "\tdocument.config.media_share.className = 'edit readonly';\n";
 		echo "\tdocument.config.player_pass.disabled = true;\n";
-		echo "\tdocument.config.media_share.disabled = true;\n";
+		echo "\tdocument.config.media_share.disabled = true;\n"; */
 	}
 	if ($cfg['player_type'] == NJB_VLC){
 		echo "\tdocument.config.player_pass.className = 'edit readonly';\n";
@@ -517,15 +550,15 @@ function initialize() {
 	
 function serverDefault() {
 	document.config.player_host.value = '127.0.0.1';
-	if (document.config.media_share.className != 'edit readonly')
-		document.config.media_share.value = '<?php echo $cfg['media_dir']; ?>';
+	/* if (document.config.media_share.className != 'edit readonly')
+		document.config.media_share.value = '<?php echo $cfg['media_dir']; ?>'; */
 }
 	
 	
 function clientDefault() {
 	document.config.player_host.value = '<?php echo gethostbyaddr($_SERVER['REMOTE_ADDR']); ?>';
-	if (document.config.media_share.className != 'edit readonly')
-		document.config.media_share.value = '<?php echo (NJB_WINDOWS) ? '//' : '/'; echo (isset($_SERVER['SERVER_ADDR'])) ? $_SERVER['SERVER_ADDR'] : $_SERVER['SERVER_NAME']; ?>/<?php echo $temp[count($temp) - 2]; ?>/';
+	/* if (document.config.media_share.className != 'edit readonly')
+		document.config.media_share.value = '<?php echo (NJB_WINDOWS) ? '//' : '/'; echo (isset($_SERVER['SERVER_ADDR'])) ? $_SERVER['SERVER_ADDR'] : $_SERVER['SERVER_NAME']; ?>/<?php echo $temp[count($temp) - 2]; ?>/'; */
 }
 
 		
@@ -554,14 +587,14 @@ function vlcDefault() {
 
 
 function mpdDefault() {
-	document.config.name.value = 'Music Player Daemon (<?php echo $player_id; ?>)';
+	document.config.name.value = 'MPD ID=<?php echo $player_id; ?>';
 	document.config.player_port.value = '6600';
 	document.config.player_pass.value = '';
 	document.config.media_share.value = '';
-	document.config.player_pass.className = 'edit readonly';
-	document.config.media_share.className = 'edit readonly';
-	document.config.player_pass.disabled = true;
-	document.config.media_share.disabled = true;
+	//document.config.player_pass.className = 'edit readonly';
+	//document.config.media_share.className = 'edit readonly';
+	//document.config.player_pass.disabled = true;
+	//document.config.media_share.disabled = true;
 	serverDefault();
 }
 //-->
@@ -1271,4 +1304,25 @@ function deleteExternalStorage() {
 		else						@unlink($entry) or message(__FILE__, __LINE__, 'error', '[b]Failed to delete file:[/b][br]' . $entry);
 	}
 }
+
+
+
+//  +------------------------------------------------------------------------+
+//  | Edit settings                                                          |
+//  +------------------------------------------------------------------------+
+function editSettings() {
+	global $cfg, $db;
+	authenticate('access_admin');
+	
+	// formattedNavigator
+	$nav			= array();
+	$nav['name'][]	= 'Configuration';
+	$nav['url'][]	= 'config.php';
+	$nav['name'][]	= 'Settings (' . choose_config_file() . ')';
+	
+	require_once('include/header.inc.php');
+	require_once('include/settings.inc.php');
+	require_once('include/footer.inc.php');
+}
+
 ?>

@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -35,6 +35,7 @@
 
 require_once('include/initialize.inc.php');
 require_once('include/stream.inc.php');
+require_once('include/library.inc.php');
 
 $image_id 	= get('image_id');
 $track_id 	= get('track_id');
@@ -62,6 +63,26 @@ function image($image_id, $quality, $track_id) {
 	/* $query  = mysqli_query($db,'SELECT image, image_front FROM bitmap WHERE image_id = "' . mysqli_real_escape_string($db,$image_id) . '" LIMIT 1');
 	$bitmap = mysqli_fetch_assoc($query) or imageError(); */
 	
+	if (strpos($track_id,'tidal_') !== false || strpos($image_id,'tidal_') !== false) {
+		if ($track_id) $album_id = getTidalId($track_id);
+		if ($image_id) $album_id = getTidalId($image_id);
+		
+		header('Cache-Control: max-age=31536000');
+		if ($quality == 'hq') {
+			$data = file_get_contents("http://images.osl.wimpmusic.com/im/im?w=1000&h=1000&albumid=" . $album_id);
+		}
+		else {
+			$data = file_get_contents("http://images.osl.wimpmusic.com/im/im?w=300&h=300&albumid=" . $album_id);
+		}
+		if ($data) {
+			streamData($data, false, false, '"never_expire"');
+		}
+		else {
+			imageError();
+		}
+		exit();
+	}
+	
 	if (!empty($track_id)) 
 	$query  = mysqli_query($db,'SELECT bitmap.image, bitmap.image_front, track.relative_file, track.track_id, bitmap.image_id  FROM bitmap LEFT JOIN track on bitmap.album_id = track.album_id WHERE bitmap.image_id = "' . mysqli_real_escape_string($db,$image_id) . '" AND track.track_id = "' . mysqli_real_escape_string($db,$track_id) . '" LIMIT 1');
 
@@ -70,11 +91,12 @@ function image($image_id, $quality, $track_id) {
 	
 	$bitmap = mysqli_fetch_assoc($query) or imageError();
 	
-	$path_parts = pathinfo($bitmap['image_front']);
-	$file_ext = $path_parts['extension'];
+	//$path_parts = pathinfo($bitmap['image_front']);
+	//$file_ext = $path_parts['extension'];
 	
 	//get embedded picture for misc tracks
 	if ((!empty($track_id)) && ((strpos(strtolower($bitmap['relative_file']), strtolower($cfg['misc_tracks_folder'])) !== false) || (strpos(strtolower($bitmap['relative_file']), strtolower($cfg['misc_tracks_misc_artists_folder'])) !== false))) {
+		
 		// Initialize getID3
 		$getID3 = new getID3;
 		//initial settings for getID3:
@@ -109,13 +131,13 @@ function image($image_id, $quality, $track_id) {
 		if (strpos($bitmap['image_front'],"misc_image.jpg") === false){ 
 			$path2file = $cfg['media_dir'] . $bitmap['image_front'];
 			if (is_file($path2file)) {
-				if ($file_ext == 'jpg') {
+				if (is_jpg($path2file)) {
 					$image = imagecreatefromjpeg($path2file);
 					header("Content-type: image/jpeg");
 					imagejpeg($image);
 					imagedestroy($image);
 				}
-				elseif ($file_ext == 'png') {
+				elseif (is_png($path2file)) {
 					$image = imagecreatefrompng($path2file);
 					header("Content-type: image/png");
 					imagepng($image);
@@ -157,6 +179,7 @@ function image($image_id, $quality, $track_id) {
 		}
 		else {
 		 */
+		 
 		header('Cache-Control: max-age=31536000');
 		streamData($bitmap['image'], 'image/jpeg', false, false, '"never_expire"');	
 		//}
@@ -165,7 +188,7 @@ function image($image_id, $quality, $track_id) {
 }
 
 
-
+/* 
 
 //  +------------------------------------------------------------------------+
 //  | Resample image                                                         |
@@ -230,7 +253,7 @@ function resampleImage($image, $size = NJB_IMAGE_SIZE) {
 	streamData($data, 'image/jpeg');
 }
 
-
+ */
 
 
 //  +------------------------------------------------------------------------+

@@ -1,7 +1,7 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant	                           |
-//  | http://www.ompd.pl                                             		     |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
+//  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
 //  | netjukebox, Copyright © 2001-2012 Willem Bartels                       |
@@ -43,6 +43,9 @@ require_once(NJB_HOME_DIR . 'skin/' . $cfg['skin'] . '/template.footer.php');
 
 if (isset($cfg['footer']) && $cfg['footer'] == 'dynamic') {
 	echo '<!-- dynamic content -->' . "\n";
+	//echo '<script>window.location.href="config-update-select.php?action=updateSelect";</script>';
+	
+	
 	@ob_flush();
 	flush();
 }

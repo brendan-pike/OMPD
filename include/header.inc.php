@@ -1,6 +1,6 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant                            |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
 //  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
@@ -79,7 +79,8 @@ $header['head']  = "\t" . '<meta http-equiv="Content-Type" content="text/html; c
 
 $header['head'] .= "\t" . '<meta name="generator" content="netjukebox, Copyright (C) 2001-2012 Willem Bartels; O!MPD, Copyright (C) 2015 Artur Sierzant">' . "\n";
 $header['head'] .= "\t" . '<title>' . $header['title'] . '</title>' . "\n";
-$header['head'] .= "\t" . '<link rel="manifest" href="manifest.json">' . "\n";
+$header['head'] .= "\t" . '<link rel="manifest" href="manifest.webmanifest">' . "\n";
+//$header['head'] .= "\t" . '<link rel="manifest" href="manifest.json">' . "\n";
 if (isset($cfg['access_media']) && $cfg['access_media']) {
 	$header['head'] .= "\t" . '<link rel="search" type="application/opensearchdescription+xml" title="O!MPD - Album Artist" href="' . NJB_HOME_URL . 'opensearch.php?action=installAlbumArtist">' . "\n";
 	$header['head'] .= "\t" . '<link rel="search" type="application/opensearchdescription+xml" title="O!MPD - Track Artist" href="' . NJB_HOME_URL . 'opensearch.php?action=installTrackArtist">' . "\n";
@@ -99,8 +100,7 @@ else
 $header['head'] .= "\t" . '<link rel="stylesheet" type="text/css" href="fonts/typicons/typicons.css">' . "\n";
 $header['head'] .= "\t" . '<link rel="stylesheet" type="text/css" href="cache.php?action=css&amp;skin=' . rawurlencode($cfg['skin']) . '&amp;hash=' . css_hash() . '">' . "\n";
 $header['head'] .= "\t" . '<script src="cache.php?action=javascript&amp;hash=' . javascript_hash() . '" type="text/javascript"></script>' . "\n";
-
-//$header['head'] .= "\t" . '<script src="jquery/jquery.js"></script>' . "\n";
+$header['head'] .= '</head>' . "\n";
 
 
 $header['body'] = 'onload="javascript: if (window.initialize) initialize(); cookie(); "';
@@ -125,21 +125,25 @@ elseif ($cfg['menu'] == 'playlist')	{
 }
 
 elseif ($cfg['menu'] == 'favorite')	{
-	$header['menu'] = "\t" . '<a href="favorite.php">favorites</a>' . "\n";
+	$header['menu'] = "\t" . '<span id="menu_middle_items"><a href="favorite.php">favorites</a></span>' . "\n";
 }
 
 elseif ($cfg['menu'] == 'config') {
-	$header['menu'] = "\t" . '<a href="config.php?action=playerProfile">player profile</a>' . $header['seperation'];
+	$header['menu'] = "\t" . '<span id="menu_middle_items">';
+	$header['menu'] .= "\t" . '<a href="config.php?action=playerProfile">player profile</a>' . $header['seperation'];
 	$header['menu'] .= "\t" . '<a href="config.php?action=streamProfile">stream profile</a>' . $header['seperation'];
 	$header['menu'] .= "\t" . '<a href="config.php?action=downloadProfile">download profile</a>' . $header['seperation'];
 	$header['menu'] .= "\t" . '<a href="config.php?action=skinProfile">skin profile</a>' . $header['seperation'];
 	$header['menu'] .= "\t" . '<a href="users.php">users</a>' . $header['seperation'];
 	$header['menu'] .= "\t" . '<a href="update.php?action=update&amp;sign=' . $cfg['sign'] . '">update all</a>' . "\n";
+	$header['menu'] .= "\t" . '</span>' . "\n";
 }
 
 elseif ($cfg['menu'] == 'about') {
-	$header['menu'] = "\t" . '<a href="about.php">about O!MPD</a>' . $header['seperation'];
+	$header['menu'] = "\t" . '<span id="menu_middle_items">';
+	$header['menu'] .= "\t" . '<a href="about.php">about O!MPD</a>' . $header['seperation'];
 	$header['menu'] .= "\t" . '<a href="about.php?action=license">license</a>' . $header['seperation'];
+	$header['menu'] .= "\t" . '</span>';
 }
 
 

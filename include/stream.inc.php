@@ -200,7 +200,8 @@ function streamData($data, $mime_type, $content_disposition = '', $filename = ''
 	else {
 		header('ETag: ' . $etag);
 		header('Accept-Ranges: bytes');
-		header('Content-Length: ' . $filesize);
+		//commented because it causes problems in cache.php when used with https protocol
+		//header('Content-Length: ' . $filesize);
 		header('Content-Type: ' . $mime_type);
 		if ($content_disposition != '' && $filename != '')
 			header('Content-Disposition: ' . $content_disposition . '; filename="' . $filename . '"');

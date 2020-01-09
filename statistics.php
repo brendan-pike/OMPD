@@ -1,7 +1,7 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant	                           |
-//  | http://www.ompd.pl                                             		     |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
+//  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
 //  | netjukebox, Copyright © 2001-2012 Willem Bartels                       |
@@ -34,6 +34,18 @@ require_once('include/cache.inc.php');
 $cfg['menu'] = 'config';
 @ob_flush();
 flush();
+
+authenticate('access_statistics');
+
+// formattedNavigator
+$nav			= array();
+$nav['name'][]	= 'Configuration';
+$nav['url'][]	= 'config.php';
+$nav['name'][]	= 'Media statistics';
+$nav['url'][]	= 'statistics.php';
+$nav['name'][]	= $title;
+require_once('include/header.inc.php');
+
 $action	 			= get('action');
 $audio_dataformat 	= get('audio_dataformat');
 $video_dataformat	= get('video_dataformat');
@@ -46,7 +58,6 @@ if	($audio_dataformat)	{
 	$query = mysqli_query($db,'SELECT album.artist_alphabetic, album.album, album.image_id, album.album_id
 		FROM track, album 
 		WHERE track.audio_dataformat = "' . mysqli_real_escape_string($db,$audio_dataformat) . '"
-		AND track.video_dataformat = ""
 		AND track.album_id = album.album_id 
 		GROUP BY album.album_id 
 		ORDER BY album.artist_alphabetic, album.album');
@@ -55,7 +66,6 @@ if	($audio_dataformat)	{
 			$query = mysqli_query($db,'SELECT album.artist_alphabetic, album.album, album.image_id, album.album_id
 			FROM track, album 
 			WHERE track.audio_dataformat = "' . mysqli_real_escape_string($db,$audio_dataformat) . '"
-			AND track.video_dataformat = ""
 			AND track.album_id = album.album_id 
 			GROUP BY album.album_id 
 			ORDER BY album.artist_alphabetic, album.album
@@ -90,13 +100,13 @@ elseif ($action == 'unique_played') {
 	$title = 'Played albums';
 	//$onmouseoverImage = true;
 	$query = mysqli_query($db,'SELECT album.artist_alphabetic, album.album, album.image_id, album.album_id
-		FROM album RIGHT JOIN (SELECT DISTINCT counter.album_id FROM counter) as c
+		FROM album RIGHT JOIN (SELECT DISTINCT counter.album_id FROM counter WHERE counter.album_id NOT LIKE "tidal_%") as c
 		ON album.album_id = c.album_id
 		ORDER BY album.artist_alphabetic, album.album');
 	$cfg['items_count'] = $album_count = mysqli_num_rows($query);
 	if ($album_count > $max_item_per_page) {
 			$query = mysqli_query($db,'SELECT album.artist_alphabetic, album.album, album.image_id, album.album_id
-			FROM album RIGHT JOIN (SELECT DISTINCT counter.album_id FROM counter) as c
+			FROM album RIGHT JOIN (SELECT DISTINCT counter.album_id FROM counter WHERE counter.album_id NOT LIKE "tidal_%") as c
 			ON album.album_id = c.album_id
 			ORDER BY album.artist_alphabetic, album.album
 			LIMIT ' . ($page - 1) * $max_item_per_page . ','  . ($max_item_per_page));
@@ -129,6 +139,15 @@ elseif ($action == 'noImageFront') {
 		WHERE image_front = ""
 		AND album.album_id = bitmap.album_id 
 		ORDER BY album.artist_alphabetic, album.album');
+	$cfg['items_count']  = $noImageFrontCount = mysqli_num_rows($query);
+	if ($noImageFrontCount > $max_item_per_page) {
+		$query = mysqli_query($db,'SELECT album.artist_alphabetic, album.album, album.album_id
+		FROM album, bitmap
+		WHERE image_front = ""
+		AND album.album_id = bitmap.album_id 
+		ORDER BY album.artist_alphabetic, album.album
+		LIMIT ' . ($page - 1) * $max_item_per_page . ','  . ($max_item_per_page));
+	}
 }
 elseif ($action == 'imageError') {
 	$title = 'image_front file error';
@@ -147,6 +166,15 @@ elseif ($action == 'noImageFrontCover') {
 		WHERE image_front_width * image_front_height < ' . $cfg['image_front_cover_treshold'] . '
 		AND album.album_id = bitmap.album_id 
 		ORDER BY album.artist_alphabetic, album.album');
+		$cfg['items_count']  = $noImageFrontCoverCount = mysqli_num_rows($query);
+	if ($noImageFrontCoverCount > $max_item_per_page) {
+		$query = mysqli_query($db,'SELECT album.artist_alphabetic, album.album, album.album_id, album.image_id
+		FROM album, bitmap
+		WHERE image_front_width * image_front_height < ' . $cfg['image_front_cover_treshold'] . '
+		AND album.album_id = bitmap.album_id 
+		ORDER BY album.artist_alphabetic, album.album
+		LIMIT ' . ($page - 1) * $max_item_per_page . ','  . ($max_item_per_page));
+	}
 }
 elseif ($action == 'noImageBackCover') {
 	$title = 'No ' . $cfg['image_back'] . ' for cover';
@@ -164,17 +192,6 @@ elseif 	($action == 'fileError')				fileError();
 elseif 	($action == 'deleteFile')				deleteFile();
 elseif	($action == '')							mediaStatistics();
 else											message(__FILE__, __LINE__, 'error', '[b]Unsupported input value for[/b][br]action');
-
-authenticate('access_statistics');
-
-// formattedNavigator
-$nav			= array();
-$nav['name'][]	= 'Configuration';
-$nav['url'][]	= 'config.php';
-$nav['name'][]	= 'Media statistics';
-$nav['url'][]	= 'statistics.php';
-$nav['name'][]	= $title;
-require_once('include/header.inc.php');
 
 ?>
 
@@ -243,11 +260,11 @@ function mediaStatistics() {
 		HAVING n1 > 1 AND n2 > 1');
 	$duplicate_name = mysqli_affected_rows($db);
 	
-	$query = mysqli_query($db,'SELECT COUNT(*) as played FROM counter');
+	$query = mysqli_query($db,'SELECT COUNT(*) as played FROM counter WHERE album_id NOT LIKE "tidal_%"');
 	$rsPlayed = mysqli_fetch_assoc($query);
 	$total_played_albums = $rsPlayed['played'];
 	
-	$query = mysqli_query($db,'SELECT COUNT(c.album_id) as played FROM (SELECT DISTINCT album_id FROM counter) as c');
+	$query = mysqli_query($db,'SELECT COUNT(c.album_id) as played FROM (SELECT DISTINCT album_id FROM counter WHERE album_id NOT LIKE "tidal_%") as c');
 	$rsPlayedUnique = mysqli_fetch_assoc($query);
 	$unique_played_albums = $rsPlayedUnique['played'];
 	
@@ -372,7 +389,7 @@ for ($i=0; $i<$histogram_count; $i++)
 	<td align="right">
 		<?php 
 		foreach ($histogram_year as $key => $value) {
-		echo '<div>' . $key . '</div>';
+		echo '<div class="stat_bar">' . $key . '</div>';
 		}
 		?>
 	</td>
@@ -381,14 +398,14 @@ for ($i=0; $i<$histogram_count; $i++)
 	<td class="bar">
 		<?php 
 		foreach ($histogram_year as $key => $value) {
-		echo '<div><div class="out-statistics"><div style="width: ' . ($value/$max_year)*100 . 'px;" class="in"></div></div></div>';
+		echo '<div class="stat_bar"><div class="out-statistics"><div style="width: ' . ($value/$max_year)*100 . 'px;" class="in"></div></div></div>';
 		}
 		?>
 	</td>
 	<td>
 	<?php 
 		foreach ($histogram_year as $key => $value) {
-		echo '<div style="text-align: right;">' . $value . '</div>';
+		echo '<div style="text-align: right;"  class="stat_bar">' . $value . '</div>';
 		}
 		?>
 	</td>
@@ -400,30 +417,78 @@ for ($i=0; $i<$histogram_count; $i++)
 	<td>By month:</td>
 	<td></td>
 	<td align="right">
-		<?php 
+		<?php
+		$isHidden = false;
+		$maxItems = 24;
+		$i = 0;
 		foreach ($histogram as $key => $value) {
-		echo '<div>' . $key . '</div>';
+			$month = (int)substr($key,-2);
+			$year  = (int)substr($key,0,4);
+			
+			$first = mktime(0,0,0,$month,1,$year);
+			$first = new DateTime(date('r', $first));
+			$tsStart = $first->getTimestamp();
+			
+			$last = mktime(23,59,00,$month+1,0,$year);
+			$last = new DateTime(date('r', $last));
+			$tsEnd = $last->getTimestamp();
+			
+			echo '<div onClick="window.location.href=\'' . NJB_HOME_URL . 'index.php?action=viewNew&tsStart=' . $tsStart . '&tsEnd=' . $tsEnd . '&addedOn=' . $key . '\'"' . (($i > $maxItems) ? ' class="no-display stat_bar pointer"' : ' class="stat_bar pointer"') . ' id="incOfDiscs' . $i . '">' . $key . '</div>';
+			$i++;
+			if ($i > $maxItems) $isHidden = true;
 		}
 		?>
 	</td>
 	<td></td>
 	<td></td>
 	<td class="bar">
-		<?php 
+		<?php
+		$i = 0;
 		foreach ($histogram as $key => $value) {
-		echo '<div><div class="out-statistics"><div style="width: ' . ($value/$max)*100 . 'px;" class="in"></div></div></div>';
-		}
+			$month = (int)substr($key,-2);
+			$year  = (int)substr($key,0,4);
+			
+			$first = mktime(0,0,0,$month,1,$year);
+			$first = new DateTime(date('r', $first));
+			$tsStart = $first->getTimestamp();
+			
+			$last = mktime(23,59,00,$month+1,0,$year);
+			$last = new DateTime(date('r', $last));
+			$tsEnd = $last->getTimestamp();
+			
+			echo '<div onClick="window.location.href=\'' . NJB_HOME_URL . 'index.php?action=viewNew&tsStart=' . $tsStart . '&tsEnd=' . $tsEnd . '&addedOn=' . $key . '\'" id="incOfDiscsCount' . $i . '"' . (($i > $maxItems) ? ' class="no-display pointer stat_bar"' : ' class="pointer stat_bar"') . ' onMouseOver="return overlib(\'See new albums from ' . $key . '\');" onMouseOut="return nd();"><div class="out-statistics"><div style="width: ' . ($value/$max)*100 . 'px;" class="in"></div></div></div>';
+			$i++;}
 		?>
+		
 	</td>
 	<td>
 	<?php 
+		$i = 0;
 		foreach ($histogram as $key => $value) {
-		echo '<div style="text-align: right;">' . $value . '</div>';
+		echo '<div style="text-align: right;" id="incOfDiscsCount' . $i . '"' . (($i > $maxItems) ? ' class="no-display stat_bar"' : '  class="stat_bar"') . '>' . $value . '</div>';
+		$i++;
 		}
 		?>
 	</td>
 	<td></td>
 </tr>
+<?php 
+if ($isHidden) {
+?>
+<tr id="histMoreRow" class="odd mouseover">
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td><div class="buttons" style="text-align: center;"><span id="histMore" style="padding: 5px;">more...</span></div></td>
+	<td></td>
+	<td></td>
+</tr>
+<?php
+}
+?>
 
 
 <tr class="header">
@@ -492,10 +557,10 @@ for ($i=0; $i<$histogram_count; $i++)
 
 <?php
 	$i = 0;
-	$query = mysqli_query($db,'SELECT audio_dataformat FROM track WHERE audio_dataformat != "" AND video_dataformat = "" GROUP BY audio_dataformat ORDER BY audio_dataformat');
+	$query = mysqli_query($db,'SELECT audio_dataformat FROM track WHERE audio_dataformat != ""  GROUP BY audio_dataformat ORDER BY audio_dataformat');
 	while($track = mysqli_fetch_assoc($query)) {
 		$audio_dataformat = $track['audio_dataformat'];
-		$track = mysqli_fetch_assoc(mysqli_query($db,'SELECT SUM(miliseconds) AS sum_miliseconds FROM track WHERE audio_dataformat = "' . mysqli_real_escape_string($db,$audio_dataformat) . '" AND video_dataformat = ""')); ?>
+		$track = mysqli_fetch_assoc(mysqli_query($db,'SELECT SUM(miliseconds) AS sum_miliseconds FROM track WHERE audio_dataformat = "' . mysqli_real_escape_string($db,$audio_dataformat) . '"')); ?>
 <tr class="<?php echo ($i++ & 1) ? 'even' : 'odd'; ?> mouseover">
 	<td></td>
 	<td><a href="statistics.php?audio_dataformat=<?php echo $audio_dataformat; ?>"><?php echo $audio_dataformat;?>:</a></td>
@@ -632,7 +697,7 @@ for ($i=0; $i<$histogram_count; $i++)
 	<td colspan="9"></td>
 </tr>
 
-<tr class="odd_error mouseover">
+<tr class="odd mouseover">
 	<td></td>
 	<td><a href="statistics.php?action=fileError">Error:</a></td>
 	<td></td>
@@ -651,6 +716,12 @@ for ($i=0; $i<$histogram_count; $i++)
 <?php
 	} ?>
 </table>
+<script>
+$('#histMore').click(function(){
+	$("[id^='incOfDiscs']").show();
+	$("#histMoreRow").hide();
+});
+</script>
 <?php
 	$cfg['items_count'] = 0; //to avoid pagination on statistic page
 	require_once('include/footer.inc.php');

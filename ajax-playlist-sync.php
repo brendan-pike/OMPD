@@ -1,7 +1,7 @@
 <?php
 //  +------------------------------------------------------------------------+
-//  | O!MPD, Copyright © 2015-2016 Artur Sierzant	                         |
-//  | http://www.ompd.pl           		                                     |
+//  | O!MPD, Copyright © 2015-2019 Artur Sierzant                            |
+//  | http://www.ompd.pl                                                     |
 //  |                                                                        |
 //  |                                                                        |
 //  | This program is free software: you can redistribute it and/or modify   |
@@ -50,7 +50,10 @@ if (!$source_playlist) {
 }
 
 
+$cfg['delay'] = 0;
 $isDestAlive = mpdSilent('status', $dest_host, $dest_port);
+$dest_delay = $cfg['delay'] / 1000;
+$dest_mpd_ver = $cfg['mpd_version'];
 if (!$isDestAlive) {
 	echo json_encode($data);
 	exit();
@@ -65,11 +68,22 @@ if ($action == 'Sync'){
 			add_stream($source_playlist[$i], $i);	
 		}
 	}
+	$cfg['delay'] = 0;
 	$source_status = mpdSilent('status', $source_host, $source_port);
+	$source_delay = $cfg['delay'] / 1000;
+	$source_mpd_ver = $cfg['mpd_version'];
 	$song = $source_status['song'];
-	$seek = explode(":",$source_status['time']);
-	//mpd('play "' . $song . '"', $dest_host, $dest_port);
-	$action_status = mpdSilent('seek ' . $song . ' ' . ($seek[0]), $dest_host, $dest_port);
+	$seek = (float)$source_status['elapsed'];
+	$data['seek'] = $seek;
+	$data['song'] = $song;
+	$data['source_delay'] = $source_delay;
+	$data['dest_delay'] = $dest_delay;
+	$seek = $seek + $dest_delay + $source_delay;
+	if (version_compare($dest_mpd_ver, '0.18.0', '<')) {
+		$seek = round($seek);
+	}
+	$data['seek fin'] = $seek;
+	$action_status = mpdSilent('seek ' . $song . ' ' . $seek, $dest_host, $dest_port);
 }
 elseif ($action == 'Copy') {
 	$action_status = mpdSilent('clear', $dest_host, $dest_port);
@@ -89,7 +103,8 @@ elseif ($action == 'Add') {
 		if ($action_status == 'ACK_ERROR_NO_EXIST'){
 			//file not found in MPD database - add stream
 			$dest_playlist = mpdSilent('playlist', $dest_host, $dest_port);
-			if (!$dest_playlist) {
+			if (!$dest_playlist && count($dest_playlist) <> 0) {
+				$data['dest_playlist'] = $dest_playlist[0];
 				echo json_encode($data);
 				exit();
 			}

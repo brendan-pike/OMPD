@@ -4,19 +4,25 @@
 //  +------------------------------------------------------------------------+
 if (isset($header) == false)
 	exit();
+
+require_once('include/play.inc.php');
+
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale: 1, minimal-ui">
-<meta name="mobile-web-app-capable" content="yes">
+<meta charset="UTF-8"> 
+<meta name="viewport" content="width=device-width, initial-scale: 1, minimal-ui" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#1f2429" />
 <link rel="icon" type="image/png" sizes="196x196" href="image/favicon.png?v=2">
 
 
-<script src="jquery/jquery-1.11.3.min.js"></script>
-<script src="javascript-src/spin.min.js"></script>
-<script src="javascript-src/arts.functions.js"></script>
- 
+<script type="text/javascript" src="jquery/jquery-3.4.1.min.js"></script>
+<script type="text/javascript" src="javascript-src/spin.min.js"></script>
+<script type="text/javascript" src="javascript-src/arts.functions.js"></script>
+<script type="text/javascript" src="javascript-src/jquery.longpress.js"></script>
+
 <?php
 $query1=mysqli_query($db,'SELECT player.player_name as pl, player.player_host as host, player.player_port as port FROM player, session WHERE (sid = BINARY "' . cookie('netjukebox_sid') . '") and player.player_id=session.player_id');
 $session1 = mysqli_fetch_assoc($query1);
@@ -54,6 +60,7 @@ var opts = {
   left: 'auto' // Left position relative to parent in px
 };
 
+var spinnerImg = new Spinner(opts);
 
 //adding swipe support
 //$.fn.swipe.defaults.excludedElements = "input, textarea, .noSwipe";
@@ -101,7 +108,7 @@ function changePlayer(player_id) {
 	$.ajax({
 			type: "GET",
 			url: "ajax-change-player.php",
-			data: { 'player_id': player_id, 'sid': '<?php echo cookie('netjukebox_sid'); ?>'},
+			data: { 'player_id': player_id, 'sid': '<?php echo $cfg['sid']; ?>'},
 			dataType : 'json',
 			success : function(json) {
 				$("#activePlayer").html(json['player']);
@@ -110,6 +117,14 @@ function changePlayer(player_id) {
 				var m = winLoc.indexOf("message.php");
 				if (n>0 || m>0) {
 					window.location = "playlist.php";
+				};
+				var f = winLoc.indexOf("favorite.php");
+				if (f>0) {
+					window.location = "favorite.php";
+				};
+				var o = winLoc.indexOf("config.php?action=playerProfile");
+				if (o>0) {
+					window.location = "config.php?action=playerProfile";
 				};
 				toggleChangePlayer();
 			},
@@ -187,13 +202,11 @@ function playlistAction(action) {
 		});
 };
 
-function addClick(){
-	$('[id^="add_"]').click(function(){
-		$(this).removeClass('fa-plus-circle').addClass('fa-cog fa-spin icon-selected');
-	});
-};
 
-$(document).ready(function () {
+
+//$(document).ready(function () {}) - since jQuery 3.0 is deprecated. 
+//$(function () {}) is recommended
+$(function () {
 	<?php 
 	// to prevent recursive call: issue#5
 	if (NJB_SCRIPT != 'message.php') { 
@@ -215,23 +228,69 @@ $(document).ready(function () {
 	resizeSuggested($tileSizeArr[0],$tileSizeArr[1]);
 	resizeUsersTab($tileSizeArr[0],$tileSizeArr[1]);
 	changeTileSizeInfo();
-	resizeImgContainer();
 	addFavSubmenuActions();
+	resizeImgContainer();
+	<?php
+	$action = $_GET['action'];
+	if (NJB_SCRIPT != 'playlist.php' && strpos($action,'layerProfile') === false && $action != 'license' && NJB_SCRIPT != 'message.php' && $cfg['username'] != '' && $cfg['show_miniplayer']) {
+	?>
+		setMiniplayer();
+	<?php
+	}
+	?>
+	//edit settings on config page
+	if (typeof myCodeMirror !== 'undefined') {
+		resizeFormSettings($tileSizeArr[1], myCodeMirror);
+	};
 	//hideAddressBar();
 	
+	//spinner for image
+	var targetImg = document.getElementById('waitIndicatorImg');
+	if (targetImg != null) {
+		showSpinnerImg(targetImg, spinnerImg);
+	}
+	
+	/* $("#image_in").one("load", function() {
+		$("#waitIndicatorImg").hide();
+	}).each(function() {
+		if(this.complete) $(this).load();
+	}); */
+	
+	$("#image_in").ready(function() {
+		$("#waitIndicatorImg").hide();
+	});
+	
+	$(window).scroll(function() {     
+		var scroll = $(window).scrollTop();
+		//var toScroll = $( "table[class='menu_middle']" ).height();
+		var toScroll = 0;
+		if (scroll > toScroll) {
+			$("#miniplayer").addClass("shadow-up");
+			$("#fixedMenu").addClass("shadow-down");
+		}
+		else {
+			$("#miniplayer").removeClass("shadow-up");
+			$("#fixedMenu").removeClass("shadow-down");
+		}
+	});
 	
 	$(window).resize(function() {
 		setMaxWidth();
-        $tileSizeArr = calcTileSize();
+    $tileSizeArr = calcTileSize();
 		resizeTile($tileSizeArr[0],$tileSizeArr[1]);
 		changeTileSizeInfo();
 		//hideAddressBar();
 		resizeImgContainer();
+		//edit settings on config page
+		if (typeof myCodeMirror !== 'undefined') {
+			resizeFormSettings($tileSizeArr[1], myCodeMirror);
+		};
 		//resizeSuggested($tileSize,$containerWidth);
     });
 	
 
-	var offset = 0.6 * $(window).height();
+		//var offset = 0.6 * $(window).height();
+		var offset = 0.6 * window.innerHeight;
     var duration = 500;
     $(window).scroll(function() {
         if ($(this).scrollTop() > offset) {
@@ -247,20 +306,25 @@ $(document).ready(function () {
         return false;
     })
 	
-	
-	
 	$('[id^="add_"]').click(function(){
-		addClick();
+		$(this).removeClass('fa-plus-circle').addClass('fa-cog fa-spin icon-selected');
 	});
+	
+	$('[id^="play_"]').click(function(){
+		$(this).removeClass('fa-play-circle-o').addClass('fa-cog fa-spin icon-selected');
+	});
+	
 	
 	$('[id^="saveCurrent"]').click(function(){
 		resetSaveCurrentOptions();
 		$(this).find('i').removeClass("fa-circle-o").addClass("fa-check-circle-o");
 		if ($(this).attr('id') == 'saveCurrentTrack') {
 			$("#trackOptions").slideDown( "slow", function() {});
+			getFavoritesList(current_track_id);
 		}
 		else {
 			$("#trackOptions").slideUp( "slow", function() {});
+			getFavoritesList();
 		}
 		//$('#savePlaylistAsName').focus();
 	});
@@ -385,7 +449,7 @@ $(document).ready(function () {
 	
 	$('#updateSelectedDir').click(function(){
 		$('#updateSelectedDir > i').removeClass('fa-refresh').addClass('fa-cog fa-spin');
-		var t = $('#updateDir').val() + '/';
+		var t = $('#updateDir').val();
 		t = t.replace(/&/g,'ompd_ampersand_ompd');
 		t = t.replace(/=/g,'%3D');
 		t = t.replace(/\+/g,'%2B');
@@ -407,8 +471,30 @@ $(document).ready(function () {
 		window.location.href = "browser.php?showUpdateSelect=true&dir=" + t;
 	});
 	
+	$('#deletePlayed').longpress(function(e) {
+		
+		ajaxRequest('play.php?action=consume',evaluateConsume);
+		if ($('#deletePlayed').text() == "delete played [Auto]") {
+			ajaxRequest('play.php?action=consume&consume=0',evaluateConsume);
+		}
+		else {
+			ajaxRequest('play.php?action=consume&consume=1',evaluateConsume);
+		}
+	}, function(e) {
+			ajaxRequest('play.php?action=deletePlayed&menu=playlist');
+	});	
+	
 });
 
+
+function evaluateConsume(data){
+	if (data.consume == '1') {
+		$('#deletePlayed').text("delete played [Auto]");
+	}
+	else {
+		$('#deletePlayed').text("delete played");
+	}
+}
 
 function evaluateVolume(data) {
 	if (typeof data.player != 'undefined') {
@@ -446,7 +532,12 @@ function evaluateVolume(data) {
 function setMaxWidth() {
 	var containerWidth = $(window).width();
 	$("#info_area").css("max-width",containerWidth);
+	$("#info_area_mini").css("max-width",containerWidth);
 	$(".wrapper").css("max-width",containerWidth);
+}
+
+function setMiniplayer(){
+		$(".wrapper, .bottom, .back-to-top, div.playlist_button").toggleClass("miniplayer");
 }
 </script>
 
@@ -472,7 +563,8 @@ $action 		= get('action');
 <script type="text/javascript">
 	var target = document.getElementById('waitIndicator');
 	var spinner = new Spinner(opts);
-	<?php if ($action != 'view3' && $action != 'downloadAlbum' && $action != 'downloadTrack' && $pos === false) echo ('showSpinner();'); ?>
+	<?php if ($action != 'view3' && $action != 'downloadAlbum' && $action != 'downloadTrack' && $pos === false) echo ('showSpinner();'); 
+	?>
 </script>
 
 <div class="wrapper">
@@ -590,8 +682,10 @@ $query2 = mysqli_query($db,'SELECT player_name, player_type, player_id FROM play
 <div class="playlist_indicator">
 	<div class="buttons">
 		<span class="pointer" onClick="ajaxRequest('play.php?action=volumeImageMap&amp;dx=' + $('#volumeValue').width() + '&amp;x=' + ($('#volumeBar').width() -($('#volumeValue').width() * 0.05)) + '&amp;menu=playlist', evaluateVolume);"><i class="fa fa-volume-down fa-lg fa-fw"></i></span>
-		<div id="volumeValue" class="out pointer" onClick="ajaxRequest('play.php?action=volumeImageMap&amp;dx=' + this.clientWidth + '&amp;x=' + getRelativeX(event, this) + '&amp;menu=playlist', evaluateVolume);">
+		<div id="volumeValueWrapper" onClick="ajaxRequest('play.php?action=volumeImageMap&amp;dx=' + this.clientWidth + '&amp;x=' + getRelativeX(event, this) + '&amp;menu=playlist', evaluateVolume);">
+		<div id="volumeValue" class="out pointer">
 			<div id="volumeBar" style="width: 0px; overflow: hidden;" class="in"></div>
+		</div>
 		</div>
 		<span class="playlist_status_off" id="volume" style="text-align: left; padding-left: 1px; display: none; align: middle;"></span>
 		<span class="pointer" onClick="ajaxRequest('play.php?action=volumeImageMap&amp;dx=' + $('#volumeValue').width() + '&amp;x=' + ($('#volumeBar').width() +($('#volumeValue').width() * 0.05)) + '&amp;menu=playlist', evaluateVolume);"><i class="fa fa-volume-up fa-lg fa-fw"></i></span>
@@ -617,10 +711,12 @@ $query2 = mysqli_query($db,'SELECT player_name, player_type, player_id FROM play
 
 
 <span id="menuMiddleMedia">
-<span id="list" onclick='toggleSubMiddle("Alpha");'>artist <i id="iconmenuSubMiddleMediaAlpha" class="fa fa-chevron-circle-down"></i></span>
+<span id="list" onclick='toggleSubMiddle("Alpha");'>people <i id="iconmenuSubMiddleMediaAlpha" class="fa fa-chevron-circle-down"></i></span>
 
 <?php echo $header['seperation']; ?>
-<span id="genre" onclick='toggleSubMiddle("Genre");'>genre <i id="iconmenuSubMiddleMediaGenre" class="fa fa-chevron-circle-down"></i></span>
+<!-- <span id="genre" onclick='toggleSubMiddle("Genre");'>genre <i id="iconmenuSubMiddleMediaGenre" class="fa fa-chevron-circle-down"></i></span>
+-->
+<a href="index.php?action=viewGenre">genre</a>
 
 <?php echo $header['seperation']; ?>
 <span id="quickSearch" onclick='toggleSubMiddle("QuickSearch");'>quick search <i id="iconmenuSubMiddleMediaQuickSearch" class="fa fa-chevron-circle-down"></i></span>
@@ -634,7 +730,8 @@ $query2 = mysqli_query($db,'SELECT player_name, player_type, player_id FROM play
 	$header['menu'] .= "\t" . '<a href="index.php?action=viewPopular&amp;period=overall">popular</a>' . $header['seperation'];
 	//$header['menu'] .= "\t" . $header['seperation'];
 	$header['menu'] .= '<a href="index.php?action=viewRandomAlbum&amp;order=artist">random</a>' . $header['seperation'];
-	$header['menu'] .= '<a href="browser.php">files</a>';
+	$header['menu'] .= '<a href="browser.php">files</a>' . $header['seperation'];
+	$header['menu'] .= '<a href="index.php?action=viewDR">DR</a>';
 	echo $header['menu'];
 ?>
 
@@ -657,17 +754,20 @@ $query2 = mysqli_query($db,'SELECT player_name, player_type, player_id FROM play
 <div id="menuSubMiddleMediaAlpha">
 	<?php
 	$header['menu'] = 'Artist<br><a href="index.php?action=view1&amp;filter=all&amp;order=artist"><span>all</span></a>';
-	//ArtS
 	$header['menu'] .= "\t" . '<a href="index.php?action=view1&amp;filter=symbol&amp;artist=&amp;order=artist"><span>#</span></a>';
 	for ($i = 'a'; $i != 'aa'; $i++)
 		  $header['menu'] .= "\t" . '<a href="index.php?action=view1&amp;filter=start&amp;artist='. $i .'&amp;order=artist"><span>' . $i . '</span></a>';
 	
 	$header['menu'] .= '<br>Album artist<br><a href="index.php?action=view2&amp;filter=all&amp;order=artist"><span>all</span></a>';
-	//ArtS
 	$header['menu'] .= "\t" . '<a href="index.php?action=view2&amp;filter=symbol&amp;artist=%23&amp;order=artist"><span>#</span></a>';
 	for ($i = 'a'; $i != 'aa'; $i++)
 		  $header['menu'] .= "\t" . '<a href="index.php?action=view2&amp;filter=start&amp;artist='. $i .'&amp;order=artist"><span>' . $i . '</span></a>';
-	$header['menu'] .= "\t"  . '<a href="index.php?action=view2&amp;artist=Various%20Artists&amp;filter=exact&amp;order=artist"><span>VA</span></a>';
+	$header['menu'] .= "\t"  . '<a href="index.php?action=view2&amp;artist=Various%20Artists&amp;filter=exact&amp;order=album"><span>VA</span></a>';
+	
+	$header['menu'] .= '<br>Composer<br><a href="index.php?action=viewComposer&amp;filter=all&amp;order=composer"><span>all</span></a>';
+	$header['menu'] .= "\t" . '<a href="index.php?action=viewComposer&amp;filter=symbol&amp;order=composer"><span>#</span></a>';
+	for ($i = 'a'; $i != 'aa'; $i++)
+		  $header['menu'] .= "\t" . '<a href="index.php?action=viewComposer&amp;filter=start&amp;composer='. $i .'&amp;order=composer"><span>' . $i . '</span></a>';
 	echo $header['menu'];
 	?>
 </div>
@@ -713,8 +813,19 @@ $query2 = mysqli_query($db,'SELECT player_name, player_type, player_id FROM play
 	else if ($cfg['menu'] == 'playlist') {
 	?>
 	<span id="menuMiddleMedia">
+	<a id="deletePlayed" class="pointer noselect">delete played</a>
+	<!-- <a id="deletePlayed" href="javascript:ajaxRequest('play.php?action=deletePlayed&amp;menu=playlist');">delete played</a> --> 
+<?php
+	/* $status = mpd('status');
+	$consume = isset($status['consume']) ? $status['consume'] : '0';
+	if ($consume == '0') {
+			echo '<a id="deletePlayed" class="pointer noselect">delete played</a>';
+	}
+	else if ($consume == '1') {
+			echo '<a id="deletePlayed" class="pointer noselect">delete played [Auto]</a>';
+	} */
+?>
 	
-	<a href="javascript:ajaxRequest('play.php?action=deletePlayed&amp;menu=playlist');">delete played</a>
 	<?php echo $header['seperation']; ?>
 	<a href="javascript:ajaxRequest('play.php?action=crop&amp;menu=playlist');">crop</a>
 	<?php echo $header['seperation']; ?>
@@ -795,7 +906,7 @@ $query2 = mysqli_query($db,'SELECT player_name, player_type, player_id FROM play
 	<td height="100%">
 
 <div id="content" class="content">
-<table cellspacing="0" cellpadding="0" class="fullscreen">
+<table cellspacing="0" cellpadding="0" class="fullscreen tabFixed">
 <!-- <tr>
 	<td colspan="3" height="3px"></td>
 </tr>
@@ -804,7 +915,10 @@ $query2 = mysqli_query($db,'SELECT player_name, player_type, player_id FROM play
 	<td class="side-margin"></td>
 	<td>
 
-	
+<?php
+	@ob_flush();
+	flush();
+?>	
 
 	
 <!-- end header -->
